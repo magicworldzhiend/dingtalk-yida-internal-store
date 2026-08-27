@@ -15,3 +15,12 @@
     box-shadow: 0 8px 20px rgba(31, 35, 41, 0.12);
     transform: scale(1.03);
 }
+
+:root .home-product-card-off-shelf {
+    color: #8F959E !important;
+    background-color: #F7F8FA !important;
+}
+
+:root .home-product-card-off-shelf img {
+    filter: grayscale(1);
+}

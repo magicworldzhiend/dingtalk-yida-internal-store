@@ -8,7 +8,7 @@
   "请求参数": {
     "formUuid": "FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK",
     "currentPage": 1,
-    "pageSize": 20
+    "pageSize": 10
   },
   "是否发送请求": "是",
   "数据处理": {

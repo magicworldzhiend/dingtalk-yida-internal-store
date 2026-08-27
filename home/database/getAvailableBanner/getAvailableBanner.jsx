@@ -1,3 +1,6 @@
+/**
+ * 将已启用的 Banner 配置转换为 Swiper 所需的 { src, link } 数组。
+ */
 function didFetch(content) {
     const domain = 'https://jepa8c.aliwork.com';
 
@@ -10,6 +13,7 @@ function didFetch(content) {
                 - Number(b.formData.numberfield_4BCfVwCO || 0);
         })
         .map(function (item) {
+            // 轮播图字段以宜搭图片对象数组的 JSON 字符串持久化。
             const imageList = JSON.parse(
                 item.formData.imagefield_0Qbn7EcV || '[]'
             );
@@ -20,6 +24,7 @@ function didFetch(content) {
                 src = domain + src;
             }
 
+            // 关联字段保存为 JSON 字符串；解析后读取首个关联 SPU 的实例 ID。
             const relationList = JSON.parse(
                 item.formData.associationFormField_mt7zpx6h_id || '[]'
             );

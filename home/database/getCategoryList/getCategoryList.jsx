@@ -1,3 +1,6 @@
+/**
+ * 将扁平类目记录转换为首页筛选器所需的两级树形结构。
+ */
 function didFetch(content) {
     const categoryList = (content.data || [])
         .map(function (item) {
@@ -14,6 +17,7 @@ function didFetch(content) {
             return item.label && item.value;
         });
 
+    /** 递归构建指定父级下的子类目，并按业务排序字段升序排列。 */
     function buildCategoryTree(parentId) {
         return categoryList
             .filter(function (item) {

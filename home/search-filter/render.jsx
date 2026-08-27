@@ -1,3 +1,6 @@
+/**
+ * 渲染首页搜索框、类目筛选抽屉及其交互状态。
+ */
 function render(me, state, data, ctx) {
     const pageContext = this;
     const pageState = pageContext.state || {};
@@ -39,16 +42,19 @@ function render(me, state, data, ctx) {
         ? selectedChildCategory.label
         : '全部二级类目';
 
+    /** 统一调用页面状态更新，保持 JSX 与商品列表共享同一 state。 */
     function updateState(value) {
         pageContext.setState(value);
     }
 
+    /** 在搜索或筛选条件变化后，通知商品触底观察器绑定新列表。 */
     function resetProductListObserver() {
         window.setTimeout(function () {
             window.dispatchEvent(new Event('home-product-list-changed'));
         }, 100);
     }
 
+    /** 提交输入框关键字，并将商品卡片可见数量重置为首批 4 条。 */
     function submitSearch() {
         updateState({
             keyword: String(keywordInput || '').trim(),
@@ -57,6 +63,7 @@ function render(me, state, data, ctx) {
         resetProductListObserver();
     }
 
+    /** 清空搜索、已应用类目及抽屉状态，恢复全部商品展示。 */
     function clearSearchAndResetProducts() {
         updateState({
             keywordInput: '',
@@ -72,6 +79,7 @@ function render(me, state, data, ctx) {
         resetProductListObserver();
     }
 
+    /** 打开抽屉并回显上一次已确认的类目筛选，而非未确认的临时选择。 */
     function openFilterDrawer() {
         updateState({
             filterDrawerVisible: true,
@@ -81,6 +89,7 @@ function render(me, state, data, ctx) {
         });
     }
 
+    /** 关闭抽屉并丢弃本次未点击“确定”的临时选择。 */
     function closeFilterDrawer() {
         updateState({
             filterDrawerVisible: false,
@@ -90,6 +99,7 @@ function render(me, state, data, ctx) {
         });
     }
 
+    /** 清除类目筛选并恢复商品列表首批展示。 */
     function clearFilter() {
         updateState({
             selectedParentCategoryId: '',
@@ -102,6 +112,7 @@ function render(me, state, data, ctx) {
         resetProductListObserver();
     }
 
+    /** 将抽屉内临时选择写入 applied 状态，供商品列表实际过滤。 */
     function confirmFilter() {
         updateState({
             appliedParentCategoryId: selectedParentCategoryId,
@@ -115,12 +126,14 @@ function render(me, state, data, ctx) {
         resetProductListObserver();
     }
 
+    /** 切换一级或二级类目下拉菜单的展开状态。 */
     function toggleCategoryMenu(menuName) {
         updateState({
             activeCategoryMenu: activeCategoryMenu === menuName ? '' : menuName
         });
     }
 
+    /** 选择一级类目时清空已选二级类目，避免父子类目不匹配。 */
     function selectParentCategory(categoryId) {
         updateState({
             selectedParentCategoryId: categoryId,
@@ -129,6 +142,7 @@ function render(me, state, data, ctx) {
         });
     }
 
+    /** 选择二级类目并关闭当前下拉菜单。 */
     function selectChildCategory(categoryId) {
         updateState({
             selectedCategoryId: categoryId,
@@ -136,6 +150,16 @@ function render(me, state, data, ctx) {
         });
     }
 
+    /**
+     * 渲染带动画的类目下拉选择器。
+     *
+     * @param {string} menuName 当前下拉菜单标识。
+     * @param {Array} optionList 可选类目列表。
+     * @param {string} selectedId 当前选中业务主键。
+     * @param {string} selectedLabel 当前展示文本。
+     * @param {string} allOptionLabel “全部”选项文本。
+     * @param {Function} onSelect 类目选择回调。
+     */
     function renderCategoryDropdown(
         menuName,
         optionList,
@@ -151,6 +175,7 @@ function render(me, state, data, ctx) {
                 <button
                     type="button"
                     onClick={(event) => {
+                        // 防止点击按钮冒泡到抽屉容器并立即关闭菜单。
                         event.stopPropagation();
                         toggleCategoryMenu(menuName);
                     }}
