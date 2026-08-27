@@ -1,0 +1,17 @@
+:root {
+    overflow: visible;
+}
+
+:root .home-product-card {
+    position: relative;
+    z-index: 1;
+    transition: transform 180ms ease-in-out, box-shadow 180ms ease-in-out,
+    border-color 180ms ease-in-out;
+}
+
+:root .home-product-card:hover {
+    z-index: 2;
+    border-color: #D9E9FF !important;
+    box-shadow: 0 8px 20px rgba(31, 35, 41, 0.12);
+    transform: scale(1.03);
+}

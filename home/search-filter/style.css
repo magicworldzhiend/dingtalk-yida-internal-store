@@ -1,0 +1,62 @@
+:root .home-category-option {
+    color: #1F2329;
+    background-color: #FFFFFF;
+    transition: background-color 160ms ease-in-out, color 160ms ease-in-out;
+}
+
+:root .home-category-option:hover {
+    color: #1677FF;
+    background-color: #F5F7FA;
+}
+
+:root .home-category-option-selected,
+:root .home-category-option-selected:hover {
+    color: #1677FF;
+    background-color: #F0F6FF;
+}
+
+:root .home-icon-action {
+    transition: background-color 160ms ease-in-out, transform 160ms ease-in-out;
+}
+
+:root .home-icon-action:hover {
+    z-index: 2;
+    background-color: #F0F6FF !important;
+    transform: translateY(-50%) scale(1.03) !important;
+}
+
+:root .home-filter-reset {
+    transition: border-color 160ms ease-in-out, background-color 160ms ease-in-out,
+    color 160ms ease-in-out;
+}
+
+:root .home-filter-reset:hover {
+    border-color: #91CAFF !important;
+    color: #1677FF !important;
+    background-color: #F0F6FF !important;
+}
+
+:root .home-filter-confirm {
+    transition: background-color 160ms ease-in-out, box-shadow 160ms ease-in-out,
+    transform 160ms ease-in-out;
+}
+
+:root .home-filter-confirm:hover {
+    background-color: #4096FF !important;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.28);
+    transform: translateY(-1px);
+}
+
+:root .home-filter-icon-action {
+    position: relative;
+    z-index: 1;
+    transition: background-color 160ms ease-in-out, border-color 160ms ease-in-out,
+    transform 160ms ease-in-out;
+}
+
+:root .home-filter-icon-action:hover {
+    z-index: 2;
+    border-color: #91CAFF !important;
+    background-color: #F0F6FF !important;
+    transform: scale(1.03);
+}
