@@ -10,6 +10,7 @@
 
 //页面加载完成
 export function didMount() {
+    initHomeProductLoadMore.call(this);
 }
 
 

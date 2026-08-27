@@ -12,6 +12,12 @@ function render(me, state, data, ctx) {
     const selectedParentCategoryId = pageState.selectedParentCategoryId || '';
     const selectedCategoryId = pageState.selectedCategoryId || '';
     const activeCategoryMenu = pageState.activeCategoryMenu || '';
+    const hasActiveSearchOrFilter = Boolean(
+        String(keywordInput || '').trim()
+        || String(pageState.keyword || '').trim()
+        || pageState.appliedParentCategoryId
+        || pageState.appliedCategoryId
+    );
 
     const selectedParentCategory = categoryList.find(function (item) {
         return item.value === selectedParentCategoryId;
@@ -37,19 +43,41 @@ function render(me, state, data, ctx) {
         pageContext.setState(value);
     }
 
+    function resetProductListObserver() {
+        window.setTimeout(function () {
+            window.dispatchEvent(new Event('home-product-list-changed'));
+        }, 100);
+    }
+
     function submitSearch() {
         updateState({
             keyword: String(keywordInput || '').trim(),
             productVisibleCount: 4
         });
+        resetProductListObserver();
+    }
+
+    function clearSearchAndResetProducts() {
+        updateState({
+            keywordInput: '',
+            keyword: '',
+            selectedParentCategoryId: '',
+            selectedCategoryId: '',
+            appliedParentCategoryId: '',
+            appliedCategoryId: '',
+            productVisibleCount: 4,
+            filterDrawerVisible: false,
+            activeCategoryMenu: ''
+        });
+        resetProductListObserver();
     }
 
     function openFilterDrawer() {
         updateState({
             filterDrawerVisible: true,
             activeCategoryMenu: '',
-            selectedParentCategoryId: '',
-            selectedCategoryId: ''
+            selectedParentCategoryId: pageState.appliedParentCategoryId || '',
+            selectedCategoryId: pageState.appliedCategoryId || ''
         });
     }
 
@@ -71,6 +99,7 @@ function render(me, state, data, ctx) {
             productVisibleCount: 4,
             activeCategoryMenu: ''
         });
+        resetProductListObserver();
     }
 
     function confirmFilter() {
@@ -83,6 +112,7 @@ function render(me, state, data, ctx) {
             productVisibleCount: 4,
             selectedCategoryId: ''
         });
+        resetProductListObserver();
     }
 
     function toggleCategoryMenu(menuName) {
@@ -247,7 +277,9 @@ function render(me, state, data, ctx) {
                     style={{
                         width: '100%',
                         height: '42px',
-                        padding: '0 46px 0 14px',
+                        padding: hasActiveSearchOrFilter
+                            ? '0 80px 0 14px'
+                            : '0 46px 0 14px',
                         border: '1px solid #D9DDE3',
                         borderRadius: '8px',
                         outline: 'none',
@@ -256,6 +288,45 @@ function render(me, state, data, ctx) {
                         boxSizing: 'border-box'
                     }}
                 />
+
+                {hasActiveSearchOrFilter && (
+                    <button
+                        type="button"
+                        class="home-icon-action"
+                        title="清空搜索并恢复全部商品"
+                        aria-label="清空搜索并恢复全部商品"
+                        onClick={() => clearSearchAndResetProducts()}
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '32px',
+                            height: '32px',
+                            padding: '0',
+                            border: '0',
+                            borderRadius: '6px',
+                            color: '#8F959E',
+                            backgroundColor: 'transparent',
+                            transform: 'translateY(-50%)'
+                        }}
+                    >
+                        <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                        >
+                            <path d="M6 6l12 12"></path>
+                            <path d="M18 6L6 18"></path>
+                        </svg>
+                    </button>
+                )}
 
                 <button
                     type="button"

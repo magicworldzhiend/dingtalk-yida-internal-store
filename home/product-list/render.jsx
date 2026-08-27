@@ -11,9 +11,6 @@ function render(me, state, data, ctx) {
     const parentCategoryId = String(pageState.appliedParentCategoryId || '');
     const categoryId = String(pageState.appliedCategoryId || '');
     const isMobile = this.utils.isMobile();
-    const productVisibleCount = Number(pageState.productVisibleCount || 4);
-    const visibleProductList = productList.slice(0, productVisibleCount);
-    const hasMoreProduct = productVisibleCount < productList.length;
 
     function parseJson(value, defaultValue) {
         try {
