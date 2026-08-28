@@ -553,7 +553,7 @@ export function onSelectBannerImage(files) {
 }
 
 /**
- * 将本地选择的图片压缩为 WebP，并通过宜搭图片组件上传压缩结果。
+ * 将本地选择的图片压缩为 JPEG，并通过宜搭图片组件上传压缩结果。
  *
  * @param {String} fieldId 图片上传组件唯一标识
  * @param {Array} files 图片上传组件传入的待上传文件列表
@@ -586,7 +586,7 @@ export function compressAndUploadImage(fieldId, files, maxDimension) {
             quality: IMAGE_COMPRESS_QUALITY,
             maxWidth: maxDimension,
             maxHeight: maxDimension,
-            mimeType: 'image/webp',
+            mimeType: 'image/jpeg',
             success: function (compressedFile) {
                 var uploaderRef = componentType === 'drag'
                     ? imageField.uploaderRef.uploaderRef
@@ -628,9 +628,9 @@ export function compressAndUploadImage(fieldId, files, maxDimension) {
 }
 
 /**
- * 生成不包含原始文件名的 Banner WebP 文件名。
+ * 生成不包含原始文件名的 Banner JPEG 文件名。
  *
- * @returns {String} WebP 文件名
+ * @returns {String} JPEG 文件名
  */
 export function buildCompressedImageName() {
     var randomBytes = new Uint32Array(1);
@@ -647,5 +647,5 @@ export function buildCompressedImageName() {
         + Date.now().toString(36)
         + '-'
         + randomValue.slice(0, 8)
-        + '.webp';
+        + '.jpg';
 }

@@ -1,0 +1,17 @@
+{
+  "名称": "getCategoryList",
+  "描述": "获取商品分类",
+  "自动加载": "是",
+  "加载方式": "并行",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/searchFormDatas.json",
+  "请求方式": "GET",
+  "请求参数": {
+    "formUuid": "FORM-98C70BE109604057994653583A13FC5CS4YD",
+    "currentPage": "1",
+    "pageSize": 100
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}
