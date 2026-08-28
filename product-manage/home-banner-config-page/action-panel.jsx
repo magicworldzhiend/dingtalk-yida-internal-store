@@ -4,10 +4,16 @@
  * 你可以点击面板上方的 「使用帮助」了解。
  */
 
+const BANNER_IMAGE_FIELD_ID = 'imageField_mt9t5mqv';
+const BANNER_IMAGE_MAX_DIMENSION = 1920;
+const IMAGE_COMPRESS_QUALITY = 0.8;
+const COMPRESSOR_SCRIPT_URL = 'https://g.alicdn.com/code/lib/compressorjs/1.1.1/compressor.min.js';
+
 // 当页面渲染完毕后马上调用下面的函数，这个函数是在当前页面 - 设置 - 生命周期 - 页面加载完成时中被关联的。
 export function didMount() {
     console.log(`「页面 JS」：当前页面地址 ${location.href}`);
-    this.loadSpuList()
+    this.loadSpuList();
+    this.utils.loadScript(COMPRESSOR_SCRIPT_URL);
     // console.log(`「页面 JS」：当前页面 id 参数为 ${this.state.urlParams.id}`);
     // 更多 this 相关 API 请参考：https://www.yuque.com/yida/support/ocmxyv#OCEXd
     // document.title = window.loginUser.userName + ' | 宜搭';
@@ -309,6 +315,9 @@ export function onOpenEditBanner(rowData) {
             return;
         }
 
+        // Banner 图片必须先在浏览器压缩，再由组件上传压缩结果。
+        imageField.set('autoUpload', false);
+
         // false：编辑回填时不触发 SPU 值变化，保留管理员此前自定义的轮播图。
         spuSelect.setValue(rowData.spuFormInstId || '', {
             triggerChange: false,
@@ -520,4 +529,123 @@ export function onConfirmEditBanner() {
         });
     });
 
+}
+
+/**
+ * 处理 Banner 图片的“选择文件”事件：压缩完成后才上传至宜搭。
+ *
+ * @param {Array} files 图片上传组件传入的待上传文件列表
+ */
+export function onSelectBannerImage(files) {
+    if (!window.Compressor) {
+        this.utils.toast({
+            title: '图片压缩组件仍在加载，请稍后重试。',
+            type: 'warning',
+        });
+        return;
+    }
+
+    this.compressAndUploadImage(
+        BANNER_IMAGE_FIELD_ID,
+        files,
+        BANNER_IMAGE_MAX_DIMENSION,
+    );
+}
+
+/**
+ * 将本地选择的图片压缩为 WebP，并通过宜搭图片组件上传压缩结果。
+ *
+ * @param {String} fieldId 图片上传组件唯一标识
+ * @param {Array} files 图片上传组件传入的待上传文件列表
+ * @param {Number} maxDimension 图片最长边上限
+ */
+export function compressAndUploadImage(fieldId, files, maxDimension) {
+    var page = this;
+    var imageField = page.$(fieldId);
+    var fileList = Array.isArray(files) ? files : [];
+
+    if (!imageField || !fileList.length) {
+        return;
+    }
+
+    var componentType = imageField.get('type');
+    var isMobile = page.utils.isMobile();
+
+    fileList.forEach(function (fileItem) {
+        var originalFile = fileItem && fileItem.originFileObj;
+
+        if (!originalFile) {
+            page.utils.toast({
+                title: '未读取到本地图片文件，请重新选择图片。',
+                type: 'error',
+            });
+            return;
+        }
+
+        new window.Compressor(originalFile, {
+            quality: IMAGE_COMPRESS_QUALITY,
+            maxWidth: maxDimension,
+            maxHeight: maxDimension,
+            mimeType: 'image/webp',
+            success: function (compressedFile) {
+                var uploaderRef = componentType === 'drag'
+                    ? imageField.uploaderRef.uploaderRef
+                    : (isMobile
+                        ? imageField.uploaderRef.uploaderRef
+                        : imageField.uploaderRef);
+
+                if (!uploaderRef || !uploaderRef.uploaderRef) {
+                    page.utils.toast({
+                        title: '图片上传组件未就绪，请关闭弹窗后重试。',
+                        type: 'error',
+                    });
+                    return;
+                }
+
+                compressedFile.lastModifiedDate = new Date();
+                compressedFile.name = page.buildCompressedImageName();
+                compressedFile.uid = fileItem.uid;
+
+                if (uploaderRef.state && Array.isArray(uploaderRef.state.value)) {
+                    uploaderRef.state.value.forEach(function (currentFile) {
+                        if (currentFile && currentFile.uid === compressedFile.uid) {
+                            currentFile.size = compressedFile.size;
+                            currentFile.name = compressedFile.name;
+                        }
+                    });
+                }
+
+                uploaderRef.uploaderRef.startUpload([compressedFile]);
+            },
+            error: function (error) {
+                page.utils.toast({
+                    title: '图片压缩失败：' + (error.message || '未知错误'),
+                    type: 'error',
+                });
+            },
+        });
+    });
+}
+
+/**
+ * 生成不包含原始文件名的 Banner WebP 文件名。
+ *
+ * @returns {String} WebP 文件名
+ */
+export function buildCompressedImageName() {
+    var randomBytes = new Uint32Array(1);
+    var randomValue = '';
+
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        window.crypto.getRandomValues(randomBytes);
+        randomValue = randomBytes[0].toString(36);
+    } else {
+        randomValue = Math.random().toString(36).slice(2, 10);
+    }
+
+    return 'banner-'
+        + Date.now().toString(36)
+        + '-'
+        + randomValue.slice(0, 8)
+        + '.webp';
 }

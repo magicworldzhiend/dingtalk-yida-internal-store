@@ -20,7 +20,8 @@ function didFetch(content) {
         try {
             var images = JSON.parse(bannerImageJson || '[]');
             var image = Array.isArray(images) && images.length ? images[0] : {};
-            var sourceUrl = image.previewUrl || image.url || '';
+            // 首页已经验证 downloadUrl 可访问；压缩上传时 previewUrl 可能为空或不可用于表格预览。
+            var sourceUrl = image.downloadUrl || image.url || image.previewUrl || '';
 
             if (sourceUrl) {
                 bannerDesktopUrl = sourceUrl.replace(
