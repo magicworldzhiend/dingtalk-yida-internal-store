@@ -39,17 +39,21 @@ function didFetch(content) {
             bannerMobileUrl = '';
         }
 
-        // 解析关联 SPU：关联字段的值是 JSON 字符串
-        var spuAssociationJson =
-            formData.associationFormField_mt7zpx6h_id || '';
+        // 新记录保存为关联对象数组；历史记录仍可能是 _id 的双层 JSON 字符串。
+        var spuAssociationValue =
+            formData.associationFormField_mt7zpx6h ||
+            formData.associationFormField_mt7zpx6h_id ||
+            '';
         var spuAssociation = [];
 
         try {
-            var parsedAssociation = spuAssociationJson
-                ? JSON.parse(spuAssociationJson)
-                : [];
+            var parsedAssociation = spuAssociationValue;
 
-            // 当前关联字段为双层 JSON 字符串：
+            if (typeof parsedAssociation === 'string' && parsedAssociation) {
+                parsedAssociation = JSON.parse(parsedAssociation);
+            }
+
+            // 历史关联字段为双层 JSON 字符串：
             // 第一次解析得到字符串，第二次解析才得到关联数组。
             if (typeof parsedAssociation === 'string') {
                 parsedAssociation = JSON.parse(parsedAssociation);
@@ -92,7 +96,6 @@ function didFetch(content) {
 
             // 编辑使用的隐藏字段
             spuFormInstId: selectedSpu.instanceId || '',
-            spuAssociationJson: spuAssociationJson,
             bannerImageJson: bannerImageJson,
             sortValue: formData.numberfield_4BCfVwCO_value === ''
                 ? 0

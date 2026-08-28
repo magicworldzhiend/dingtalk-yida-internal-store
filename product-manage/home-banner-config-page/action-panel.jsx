@@ -298,6 +298,7 @@ export function onOpenEditBanner(rowData) {
 
     // 当前要更新的首页轮播记录实例 ID
     this.setState({
+        bannerDialogMode: 'edit',
         editingBannerFormInstId: rowData.formInstId,
         editingSpuFormInstId: rowData.spuFormInstId || '',
     });
@@ -334,6 +335,37 @@ export function onOpenEditBanner(rowData) {
 }
 
 /**
+ * 打开新增 Banner 对话框，并清空现有编辑值。
+ * 确认按钮会根据 create 模式创建轮播配置记录。
+ */
+export function onOpenCreateBanner() {
+    this.setState({
+        bannerDialogMode: 'create',
+        editingBannerFormInstId: '',
+        editingSpuFormInstId: '',
+    });
+
+    this.$('dialog_mt9t5mqt').show(() => {
+        var spuSelect = this.$('selectField_mt9t5mqx');
+        var imageField = this.$('imageField_mt9t5mqv');
+        var numberField = this.$('numberField_mt9t5mqw');
+
+        if (!spuSelect || !imageField || !numberField) {
+            this.utils.toast({
+                title: '新增弹窗字段未找到，请确认当前页面组件配置。',
+                type: 'error',
+            });
+            return;
+        }
+
+        imageField.set('autoUpload', false);
+        spuSelect.setValue('', { triggerChange: false });
+        imageField.setValue([], { triggerChange: false });
+        numberField.setValue(0, { triggerChange: false });
+    });
+}
+
+/**
  * 编辑弹窗中 SPU 下拉的“值变化”事件。
  */
 export function onEditBannerSpuChange({ value }) {
@@ -351,10 +383,11 @@ export function onEditBannerSpuChange({ value }) {
 }
 
 /**
- * 编辑弹窗“确认”事件。
+ * Banner 新增或编辑弹窗的保存逻辑。
  */
 export async function submitEditBanner() {
     var bannerFormInstId = this.state.editingBannerFormInstId;
+    var isCreate = this.state.bannerDialogMode === 'create';
     var spuSelect = this.$('selectField_mt9t5mqx');
     var imageField = this.$('imageField_mt9t5mqv');
     var numberField = this.$('numberField_mt9t5mqw');
@@ -377,7 +410,7 @@ export async function submitEditBanner() {
     var bannerImages = imageField.get('value') || [];
     var sortValue = numberField.get('value');
 
-    if (!bannerFormInstId) {
+    if (!isCreate && !bannerFormInstId) {
         this.utils.toast({
             title: '未获取到当前轮播记录，请关闭后重新点击编辑。',
             type: 'error',
@@ -485,6 +518,8 @@ export async function submitEditBanner() {
         textField_mt806lzd: selectedSpu.productName,
         imagefield_0Qbn7EcV: JSON.stringify(normalizedBannerImages),
         numberfield_4BCfVwCO: numberSortValue,
+        // 新增记录默认启用；管理员可通过列表开关调整。
+        radiofield_9aVrQD8v: '启用',
     };
 
     try {
@@ -493,17 +528,37 @@ export async function submitEditBanner() {
             JSON.stringify(bannerImages)
         );
 
-        await this.utils.yida.updateFormData({
-            formInstId: bannerFormInstId,
-            updateFormDataJson: JSON.stringify(updateFormData),
-            useLatestVersion: 'y',
-        });
+        if (isCreate) {
+            // 新增接口的关联表单字段使用标准关联对象数组；历史记录的更新仍沿用已验证的 _id 双层 JSON 格式。
+            var createFormData = Object.assign({}, updateFormData, {
+                associationFormField_mt7zpx6h: associationArray,
+            });
+            delete createFormData.associationFormField_mt7zpx6h_id;
+
+            await this.utils.yida.saveFormData({
+                formUuid: 'FORM-FSD66281M0N88KURKUU4B7EQZ3GA2HPVHZ7TM1',
+                appType: window.pageConfig.appType,
+                formDataJson: JSON.stringify(createFormData),
+            });
+        } else {
+            await this.utils.yida.updateFormData({
+                formInstId: bannerFormInstId,
+                updateFormDataJson: JSON.stringify(updateFormData),
+                useLatestVersion: 'y',
+            });
+        }
 
         this.$('dialog_mt9t5mqt').hide();
 
         this.utils.toast({
-            title: '轮播配置已更新。',
+            title: isCreate ? '轮播配置已新增。' : '轮播配置已更新。',
             type: 'success',
+        });
+
+        this.setState({
+            bannerDialogMode: '',
+            editingBannerFormInstId: '',
+            editingSpuFormInstId: '',
         });
 
         this.onRefreshBannerList();
@@ -515,11 +570,10 @@ export async function submitEditBanner() {
     }
 }
 
+/**
+ * 复用现有对话框确认按钮，按当前弹窗模式保存新增或编辑数据。
+ */
 export function onConfirmEditBanner() {
-    if (!this.state.editingBannerFormInstId) {
-        return;
-    }
-
     this.submitEditBanner().catch((error) => {
         console.error('保存轮播配置失败：', error);
 
