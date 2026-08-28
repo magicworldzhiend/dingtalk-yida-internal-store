@@ -51,6 +51,46 @@ export function initHomeSwiper() {
     const pageContext = this;
     let retryCount = 0;
 
+    /** 加载指定轮播项的延迟图片，避免首次渲染并发下载全部 Banner 原图。 */
+    function loadBannerImage(slide) {
+        const image = slide && slide.querySelector('img[data-home-banner-src]');
+
+        if (!image) {
+            return;
+        }
+
+        const imageUrl = image.dataset.homeBannerSrc;
+
+        if (!imageUrl) {
+            return;
+        }
+
+        image.src = imageUrl;
+        image.removeAttribute('data-home-banner-src');
+    }
+
+    /** 预加载当前 Banner 及下一张，兼顾首屏带宽和轮播切换体验。 */
+    function loadActiveBannerImages(swiper) {
+        const bannerCount = Array.isArray(pageContext.state.getAvailableBanner)
+            ? pageContext.state.getAvailableBanner.length
+            : 0;
+
+        if (!bannerCount) {
+            return;
+        }
+
+        const currentIndex = Number(swiper.realIndex || 0);
+        const nextIndex = (currentIndex + 1) % bannerCount;
+
+        [currentIndex, nextIndex].forEach((bannerIndex) => {
+            const slideList = document.querySelectorAll(
+                '#home-banner-swiper .swiper-slide[data-banner-index="' + bannerIndex + '"]'
+            );
+
+            slideList.forEach(loadBannerImage);
+        });
+    }
+
     /** 尝试挂载轮播实例，直到 Banner 数据和目标 DOM 同时就绪。 */
     function mountSwiper() {
         const bannerList = Array.isArray(pageContext.state.getAvailableBanner)
@@ -95,6 +135,11 @@ export function initHomeSwiper() {
                         prevEl: swiperElement.querySelector('.home-banner-prev'),
                         nextEl: swiperElement.querySelector('.home-banner-next')
                     }
+                });
+
+                loadActiveBannerImages(pageContext.homeSwiper);
+                pageContext.homeSwiper.on('slideChangeTransitionStart', () => {
+                    loadActiveBannerImages(pageContext.homeSwiper);
                 });
             })
             .catch((error) => {

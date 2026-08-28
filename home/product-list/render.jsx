@@ -288,6 +288,9 @@ function render(me, state, data, ctx) {
                                 <img
                                     src={product.productImage}
                                     alt={product.productName}
+                                    loading="lazy"
+                                    fetchpriority="low"
+                                    decoding="async"
                                     style={{
                                         display: 'block',
                                         width: '100%',

@@ -14,9 +14,17 @@ function render(me, state, data, ctx) {
                     <a
                         key={banner.src || index}
                         class="swiper-slide"
+                        data-banner-index={index}
                         href={banner.link || ''}
                     >
-                        <img src={banner.src} alt="" />
+                        <img
+                            src={index === 0 ? banner.src : undefined}
+                            data-home-banner-src={index === 0 ? undefined : banner.src}
+                            alt=""
+                            loading={index === 0 ? 'eager' : 'lazy'}
+                            fetchpriority={index === 0 ? 'high' : 'low'}
+                            decoding="async"
+                        />
                     </a>
                 ))}
             </div>

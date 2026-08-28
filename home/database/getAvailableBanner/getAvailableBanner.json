@@ -2,7 +2,7 @@
   "名称": "getAvailableBanner",
   "描述": "获取首页Banner配置",
   "自动加载": "是",
-  "加载方式": "串行",
+  "加载方式": "并行",
   "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/searchFormDatas.json",
   "请求方式": "GET",
   "请求参数": {
