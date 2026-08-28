@@ -1,4 +1,5 @@
 const YIDA_OSS_PREFIX = "https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD";
+const DEFAULT_DEBUG_SPU_ID = "520260824163552";
 // const getGoodsImageUrl = (picStr) => {
 //   if (!picStr) return "";
 //   try {
@@ -131,18 +132,130 @@ async function getGoodsSkuListBySpu(spu, instance) {
     return productDetails;
 }
 
+/**
+ * 按固定 CDN 地址加载 Swiper，复用全局 Promise 防止重复插入脚本。
+ *
+ * @returns {Promise<void>} Swiper 脚本加载结果
+ */
+function loadProductDetailSwiperScript() {
+    if (window.Swiper) {
+        return Promise.resolve();
+    }
+
+    if (window.productDetailSwiperScriptPromise) {
+        return window.productDetailSwiperScriptPromise;
+    }
+
+    window.productDetailSwiperScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/swiper@11.2.1/swiper-bundle.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+    });
+
+    return window.productDetailSwiperScriptPromise;
+}
+
+/**
+ * 初始化商品详情主图 Swiper，并按需加载当前图与下一张图。
+ */
+export function initProductDetailSwiper() {
+    const pageContext = this;
+    let retryCount = 0;
+
+    function loadProductImage(slide) {
+        const image = slide && slide.querySelector('img[data-product-detail-src]');
+
+        if (!image || !image.dataset.productDetailSrc) {
+            return;
+        }
+
+        image.src = image.dataset.productDetailSrc;
+        image.removeAttribute('data-product-detail-src');
+    }
+
+    function loadActiveProductImages(swiper) {
+        const imageList = pageContext.state.product
+            && Array.isArray(pageContext.state.product.imageList)
+            ? pageContext.state.product.imageList
+            : [];
+        const currentIndex = Number(swiper.realIndex || 0);
+        const nextIndex = imageList.length > 1
+            ? (currentIndex + 1) % imageList.length
+            : currentIndex;
+
+        [currentIndex, nextIndex].forEach((imageIndex) => {
+            document.querySelectorAll(
+                '#product-detail-swiper .swiper-slide[data-product-image-index="'
+                + imageIndex + '"]'
+            ).forEach(loadProductImage);
+        });
+    }
+
+    function mountSwiper() {
+        const imageList = pageContext.state.product
+            && Array.isArray(pageContext.state.product.imageList)
+            ? pageContext.state.product.imageList
+            : [];
+        const swiperElement = document.querySelector('#product-detail-swiper');
+
+        if ((!imageList.length || !swiperElement) && retryCount < 40) {
+            retryCount += 1;
+            setTimeout(mountSwiper, 250);
+            return;
+        }
+
+        if (!imageList.length || !swiperElement) {
+            return;
+        }
+
+        if (pageContext.productDetailSwiper) {
+            pageContext.productDetailSwiper.destroy(true, true);
+            pageContext.productDetailSwiper = null;
+        }
+
+        loadProductDetailSwiperScript()
+            .then(() => {
+                pageContext.productDetailSwiper = new window.Swiper(swiperElement, {
+                    loop: imageList.length > 1,
+                    speed: 500,
+                    allowTouchMove: true,
+                    simulateTouch: true,
+                    autoplay: imageList.length > 1
+                        ? {
+                            delay: 5000,
+                            disableOnInteraction: false,
+                        }
+                        : false,
+                    pagination: {
+                        el: swiperElement.querySelector('.product-detail-pagination'),
+                        clickable: true,
+                    },
+                    navigation: {
+                        prevEl: swiperElement.querySelector('.product-detail-prev'),
+                        nextEl: swiperElement.querySelector('.product-detail-next'),
+                    },
+                });
+
+                loadActiveProductImages(pageContext.productDetailSwiper);
+                pageContext.productDetailSwiper.on('slideChangeTransitionStart', () => {
+                    loadActiveProductImages(pageContext.productDetailSwiper);
+                });
+            })
+            .catch((error) => {
+                console.error('商品详情 Swiper 加载失败：', error);
+            });
+    }
+
+    mountSwiper();
+}
+
 
 export async function didMount() {
 
-// 获取spuID
-    const spuID = this.utils.getUrlParams().spuID;
-    if (!spuID) {
-        this.utils.toast({ title: "缺少spuID参数，页面无法加载", type: "error" });
-        setTimeout(() => {
-            // window.history.back();
-        }, 1000);
-        return;
-    }
+    // 正常从首页路由读取 SPU_ID；直接调试详情页时回退到固定测试商品。
+    const spuID = this.utils.getUrlParams().spuID || DEFAULT_DEBUG_SPU_ID;
 
 
     const product = {};
@@ -177,10 +290,7 @@ export async function didMount() {
 
     );
 
-    this.$("slider_mt9iecc2").set(
-        "images",
-        product.imageList.map((src) => ({ src })),
-    );
+    initProductDetailSwiper.call(this);
 
 }
 

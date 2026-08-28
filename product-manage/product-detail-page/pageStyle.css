@@ -1,3 +1,7 @@
 :root {
-    background-color: #f2f3f5;
+    box-sizing: border-box;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background-color: #FFFFFF;
 }
