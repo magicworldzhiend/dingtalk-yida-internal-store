@@ -9,13 +9,23 @@ function render(me, state, data, ctx) {
     return (
         <div id="home-banner-swiper" class="swiper home-banner-swiper">
             <div class="swiper-wrapper">
-                {/* 每条 Banner 的链接由数据源根据关联 SPU 实例 ID 生成。 */}
+                {/* 点击 Banner 后由宜搭路由跳转至关联 SPU 的详情页。 */}
                 {bannerList.map((banner, index) => (
                     <a
                         key={banner.src || index}
                         class="swiper-slide"
                         data-banner-index={index}
-                        href={banner.link || ''}
+                        href={banner.spuId ? '#' : ''}
+                        onClick={(event) => {
+                            event.preventDefault();
+
+                            if (banner.spuId) {
+                                this.utils.router.push(
+                                    'FORM-CBE983ABBA9A456882844971E75A61FC1M0L',
+                                    { spuID: banner.spuId }
+                                );
+                            }
+                        }}
                     >
                         <img
                             src={index === 0 ? banner.src : undefined}

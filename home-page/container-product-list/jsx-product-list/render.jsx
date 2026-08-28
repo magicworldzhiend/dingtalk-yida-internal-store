@@ -262,9 +262,17 @@ function render(me, state, data, ctx) {
                         class={product.isOffShelf
                             ? 'home-product-card home-product-card-off-shelf'
                             : 'home-product-card'}
-                        href={product.formInstId
-                            ? '/detail?spuId=' + encodeURIComponent(product.formInstId)
-                            : ''}
+                        href={product.spuId ? '#' : ''}
+                        onClick={(event) => {
+                            event.preventDefault();
+
+                            if (product.spuId) {
+                                this.utils.router.push(
+                                    'FORM-CBE983ABBA9A456882844971E75A61FC1M0L',
+                                    { spuID: product.spuId }
+                                );
+                            }
+                        }}
                         style={{
                             display: 'block',
                             overflow: 'hidden',
