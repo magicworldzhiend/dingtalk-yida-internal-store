@@ -2,8 +2,17 @@
     box-sizing: border-box;
     width: calc(100% - 24px);
     max-width: 1200px;
-    margin: 16px auto 0;
+    /* PC 端保留首页同款顶部留白，形成页面底色与内容层的分隔。 */
+    margin: 0px auto 0;
     overflow: visible;
     border-radius: 12px;
     background-color: #FFFFFF;
+}
+
+@media screen and (max-width: 767px) {
+    :root {
+        width: calc(100% - 25px);
+        margin-top: 4px;
+        border-radius: 8px;
+    }
 }

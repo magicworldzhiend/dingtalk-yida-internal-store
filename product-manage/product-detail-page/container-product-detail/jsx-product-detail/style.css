@@ -1,5 +1,5 @@
 :root .product-detail-page {
-    padding: 24px 0 0;
+    padding: 0px 0 0;
     background: #FFFFFF;
     color: #1F2329;
     box-sizing: border-box;
@@ -85,7 +85,8 @@
     right: 0;
     width: 240px;
     height: 100%;
-    background: linear-gradient(135deg, rgba(22, 119, 255, 0.08), transparent 70%);
+    /* SPU 信息卡从右侧蓝色向左侧自然淡出。 */
+    background: linear-gradient(to left, rgba(22, 119, 255, 0.15), rgba(22, 119, 255, 0.05) 52%, transparent 100%);
     content: '';
     pointer-events: none;
 }
@@ -161,7 +162,7 @@
     border-radius: 6px;
     background: #F0F7FF;
     color: #1677FF;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 :root .product-detail-stock-empty {
@@ -215,6 +216,11 @@
     padding-top: 7px;
     color: #646A73;
     font-size: 14px;
+}
+
+/* PC 端属性名称向规格选项靠拢，减少标签列的左侧空白感。 */
+:root .product-detail-attribute-name {
+    padding-left: 12px;
 }
 
 :root .product-detail-attribute-values {
@@ -449,7 +455,48 @@
     font-size: 18px;
 }
 
+:root .product-detail-purchase-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+:root .product-detail-home-button {
+    display: inline-flex;
+    position: relative;
+    z-index: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 128px;
+    height: 44px;
+    border: 1px solid #91CAFF;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #1677FF;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease,
+        transform 160ms ease, box-shadow 160ms ease;
+}
+
+:root .product-detail-home-icon {
+    font-size: 19px;
+    line-height: 1;
+}
+
+:root .product-detail-home-button:hover {
+    border-color: #1677FF;
+    background: #EAF4FF;
+    color: #0F66D8;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.16);
+    transform: scale(1.03);
+}
+
 :root .product-detail-buy-button {
+    position: relative;
+    z-index: 1;
     min-width: 160px;
     height: 44px;
     border: 0;
@@ -459,11 +506,13 @@
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
-    transition: background-color 160ms ease;
+    transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 :root .product-detail-buy-button:hover {
     background: #0F66D8;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22);
+    transform: scale(1.03);
 }
 
 :root .product-detail-buy-button:disabled {
@@ -473,11 +522,12 @@
 
 @media screen and (max-width: 767px) {
     :root .product-detail-page {
-        padding: 12px 0 0;
+        /* 为固定合计栏和系统安全区预留空间，避免遮挡最后的 SKU 细节图。 */
+        padding: 4px 0 calc(64px + env(safe-area-inset-bottom));
     }
 
     :root .product-detail-gallery {
-        margin-bottom: 12px;
+        margin-bottom: 4px;
     }
 
     :root .product-detail-swiper,
@@ -492,34 +542,77 @@
     }
 
     :root .product-detail-card {
-        margin-bottom: 12px;
-        padding: 16px;
+        margin-bottom: 4px;
+        padding: 10px;
         border-radius: 8px;
     }
 
     :root .product-detail-title {
-        font-size: 20px;
+        margin: 8px 0 4px;
+        font-size: 18px;
     }
 
     :root .product-detail-price {
-        font-size: 28px;
+        font-size: 26px;
+    }
+
+    :root .product-detail-price-prefix {
+        font-size: 16px;
+    }
+
+    :root .product-detail-stock {
+        padding: 5px 8px;
+        font-size: 14px;
+    }
+
+    :root .product-detail-spu,
+    :root .product-detail-category,
+    :root .product-detail-section-heading span {
+        font-size: 12px;
+    }
+
+    :root .product-detail-section-heading {
+        padding-bottom: 12px;
+    }
+
+    :root .product-detail-section-heading h2 {
+        font-size: 16px;
     }
 
     :root .product-detail-attribute {
         display: block;
+        padding-top: 14px;
+    }
+
+    /* 标题分隔线与第一个规格属性之间保留一致的阅读间距。 */
+    :root .product-detail-attribute-area .product-detail-attribute:first-child {
+        padding-top: 14px;
     }
 
     :root .product-detail-attribute-name {
-        padding: 0 0 10px;
+        padding: 0 0 8px;
+        font-size: 13px;
+    }
+
+    :root .product-detail-option {
+        min-width: 64px;
+        padding: 6px 10px;
+        font-size: 13px;
     }
 
     :root .product-detail-selection-layout {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 14px;
     }
 
     :root .product-detail-selection-content {
         min-height: 0;
+    }
+
+    /* 购买数量分隔线不紧贴最后一个规格属性。 */
+    :root .product-detail-quantity-row {
+        margin-top: 14px;
+        padding-top: 14px;
     }
 
     :root .product-detail-spec-image {
@@ -534,11 +627,31 @@
     :root .product-detail-purchase-bar {
         bottom: 0;
         min-height: 60px;
-        padding: 10px 0;
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    }
+
+    :root .product-detail-purchase-content {
+        width: calc(100% - 8px);
+    }
+
+    :root .product-detail-purchase-summary {
+        gap: 2px;
+        margin-left: 12px;
+        margin-right: 10px;
+        font-size: 12px;
+    }
+
+    :root .product-detail-purchase-summary strong {
+        font-size: 16px;
     }
 
     :root .product-detail-buy-button {
-        min-width: 132px;
-        height: 42px;
+        min-width: 120px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    :root .product-detail-home-button {
+        display: none;
     }
 }

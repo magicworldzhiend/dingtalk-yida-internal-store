@@ -3,5 +3,6 @@
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: #FFFFFF;
+    /* 与首页一致的浅灰页面底色，用于衬托白色详情内容层。 */
+    background-color: #F5F6F8;
 }

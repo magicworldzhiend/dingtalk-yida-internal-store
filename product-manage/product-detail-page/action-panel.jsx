@@ -112,8 +112,14 @@ async function getGoodsSkuListBySpu(spu, instance) {
                 const rawImgArr = JSON.parse(imgJsonStr.trim());
                 if (Array.isArray(rawImgArr)) {
                     imageList = rawImgArr
-                        .filter((item) => item.previewUrl)
-                        .map((item) => YIDA_OSS_PREFIX + item.previewUrl);
+                        // previewUrl 是预览图，放大后会模糊；详情页优先使用原始下载地址。
+                        .map((item) => item.downloadUrl || item.url || item.previewUrl || "")
+                        .filter(Boolean)
+                        .map((imageUrl) => (
+                            /^https?:\/\//i.test(imageUrl)
+                                ? imageUrl
+                                : YIDA_OSS_PREFIX + imageUrl
+                        ));
                 }
             } catch (err) {
                 imageList = [];
@@ -155,6 +161,89 @@ function loadProductDetailSwiperScript() {
     });
 
     return window.productDetailSwiperScriptPromise;
+}
+
+/**
+ * 让固定支付栏始终与商品详情的实际内容区域对齐。
+ *
+ * fixed 元素会以浏览器视口定位，无法继承宜搭页面容器在侧栏展开、收起后的
+ * 可用区域。这里读取 JSX 根节点的实时边界并写入支付栏；不依赖侧栏宽度，
+ * 因而适用于不同页面布局和窗口尺寸。
+ */
+export function initProductDetailPurchaseBarAlignment() {
+    const pageContext = this;
+    let retryCount = 0;
+    let animationFrameId = null;
+
+    function clearPurchaseBarPosition(purchaseBar) {
+        purchaseBar.style.removeProperty('left');
+        purchaseBar.style.removeProperty('right');
+        purchaseBar.style.removeProperty('width');
+    }
+
+    function updatePurchaseBarPosition() {
+        animationFrameId = null;
+
+        const pageElement = document.querySelector('.product-detail-page');
+        const purchaseBar = document.querySelector('.product-detail-purchase-bar');
+
+        if (!pageElement || !purchaseBar) {
+            return;
+        }
+
+        // 移动端沿用 CSS 的全宽底栏，避免安全区和窄屏布局受桌面端定位影响。
+        if (window.matchMedia('(max-width: 767px)').matches) {
+            clearPurchaseBarPosition(purchaseBar);
+            return;
+        }
+
+        const pageRect = pageElement.getBoundingClientRect();
+
+        if (pageRect.width <= 0) {
+            return;
+        }
+
+        purchaseBar.style.left = pageRect.left + 'px';
+        purchaseBar.style.right = 'auto';
+        purchaseBar.style.width = pageRect.width + 'px';
+    }
+
+    function schedulePurchaseBarPosition() {
+        if (animationFrameId !== null) {
+            return;
+        }
+
+        animationFrameId = window.requestAnimationFrame(updatePurchaseBarPosition);
+    }
+
+    function bindPurchaseBarPosition() {
+        const pageElement = document.querySelector('.product-detail-page');
+        const purchaseBar = document.querySelector('.product-detail-purchase-bar');
+
+        if (!pageElement || !purchaseBar) {
+            if (retryCount < 40) {
+                retryCount += 1;
+                window.setTimeout(bindPurchaseBarPosition, 250);
+            }
+            return;
+        }
+
+        // 详情内容宽度变化（响应式和画布布局变化）时自动重新对齐。
+        if (window.ResizeObserver) {
+            pageContext.productDetailPurchaseBarResizeObserver = new window.ResizeObserver(
+                schedulePurchaseBarPosition
+            );
+            pageContext.productDetailPurchaseBarResizeObserver.observe(pageElement);
+        }
+
+        window.addEventListener('resize', schedulePurchaseBarPosition);
+        window.addEventListener('orientationchange', schedulePurchaseBarPosition);
+        // 宜搭左侧导航通常通过过渡动画展开/收起；动画结束后重新读取内容边界。
+        document.addEventListener('transitionend', schedulePurchaseBarPosition, true);
+        schedulePurchaseBarPosition();
+    }
+
+    bindPurchaseBarPosition();
 }
 
 /**
@@ -291,6 +380,7 @@ export async function didMount() {
     );
 
     initProductDetailSwiper.call(this);
+    initProductDetailPurchaseBarAlignment.call(this);
 
 }
 

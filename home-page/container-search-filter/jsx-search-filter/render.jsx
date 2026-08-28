@@ -107,7 +107,9 @@ function render(me, state, data, ctx) {
             appliedParentCategoryId: '',
             appliedCategoryId: '',
             productVisibleCount: 4,
-            activeCategoryMenu: ''
+            activeCategoryMenu: '',
+            // 重置后的交互与“确定”一致：清空条件并收起筛选抽屉。
+            filterDrawerVisible: false
         });
         resetProductListObserver();
     }
@@ -450,21 +452,42 @@ function render(me, state, data, ctx) {
                     }}
                     style={{
                         position: 'absolute',
-                        top: '0',
+                        top: isMobile ? 'auto' : '0',
                         right: '0',
+                        bottom: isMobile ? '0' : 'auto',
                         display: 'flex',
                         flexDirection: 'column',
                         width: isMobile ? '100%' : '360px',
-                        height: '100%',
-                        padding: '24px',
+                        height: isMobile ? '72vh' : '100%',
+                        padding: isMobile
+                            ? '16px 16px calc(16px + env(safe-area-inset-bottom))'
+                            : '24px',
                         boxSizing: 'border-box',
+                        overflowY: 'auto',
+                        borderRadius: isMobile ? '16px 16px 0 0' : '0',
                         backgroundColor: '#FFFFFF',
-                        boxShadow: '-8px 0 24px rgba(31, 35, 41, 0.12)',
-                        transform: drawerVisible ? 'translateX(0)' : 'translateX(100%)',
+                        boxShadow: isMobile
+                            ? '0 -8px 24px rgba(31, 35, 41, 0.12)'
+                            : '-8px 0 24px rgba(31, 35, 41, 0.12)',
+                        transform: drawerVisible
+                            ? 'translate(0, 0)'
+                            : (isMobile ? 'translateY(100%)' : 'translateX(100%)'),
                         transition: 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)',
                         willChange: 'transform'
                     }}
                 >
+                    {isMobile && (
+                        <div
+                            aria-hidden="true"
+                            style={{
+                                width: '32px',
+                                height: '4px',
+                                margin: '0 auto 16px',
+                                borderRadius: '999px',
+                                backgroundColor: '#D9DDE3'
+                            }}
+                        />
+                    )}
                     <div
                         style={{
                             display: 'flex',

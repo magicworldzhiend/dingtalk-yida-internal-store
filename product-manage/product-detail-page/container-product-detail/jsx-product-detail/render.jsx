@@ -150,6 +150,19 @@ function render() {
         });
     };
 
+    /** 从首页进入详情页时，返回浏览器历史中的首页。 */
+    const goBackToHome = () => {
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+
+        this.utils.toast({
+            title: '未找到首页访问记录，请从首页重新进入商品详情。',
+            type: 'warning',
+        });
+    };
+
     return (
         <div class="product-detail-page">
             <section class="product-detail-gallery">
@@ -275,13 +288,23 @@ function render() {
                         <span>已选 {currentSku ? currentSku.attrText : '规格'} × {buyNum}</span>
                         <strong>合计 ¥ {totalPrice}</strong>
                     </div>
-                    <button
-                        class="product-detail-buy-button"
-                        disabled={isOutOfStock || isOffShelf}
-                        onClick={onBuy}
-                    >
-                        {isOffShelf ? '商品已下架' : (isOutOfStock ? '暂时缺货' : '立即购买')}
-                    </button>
+                    <div class="product-detail-purchase-actions">
+                        <button
+                            class="product-detail-home-button"
+                            type="button"
+                            onClick={goBackToHome}
+                        >
+                            <span class="product-detail-home-icon" aria-hidden="true">⌂</span>
+                            返回首页
+                        </button>
+                        <button
+                            class="product-detail-buy-button"
+                            disabled={isOutOfStock || isOffShelf}
+                            onClick={onBuy}
+                        >
+                            {isOffShelf ? '商品已下架' : (isOutOfStock ? '暂时缺货' : '立即购买')}
+                        </button>
+                    </div>
                 </div>
             </footer>
         </div>
