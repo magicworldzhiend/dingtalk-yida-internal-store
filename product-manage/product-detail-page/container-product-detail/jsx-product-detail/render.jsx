@@ -43,6 +43,7 @@ function render() {
     const spuNo = product.spuNo || '-';
     const shelfStatus = product.shelfStatus || '-';
     const isOffShelf = shelfStatus === '下架';
+    const isCreatingOrder = Boolean(pageState.isCreatingOrder);
 
     const refreshJsx = () => {
         const jsxComponent = this.$('jsx_mt9iecc3');
@@ -118,7 +119,11 @@ function render() {
         });
     };
 
-    const onBuy = () => {
+    const onBuy = async () => {
+        if (isCreatingOrder) {
+            return;
+        }
+
         if (isOffShelf) {
             this.utils.toast({ title: '该商品已下架', type: 'warning' });
             return;
@@ -134,21 +139,149 @@ function render() {
             return;
         }
 
-        const requestData = Object.assign({
-            spec_id: product.spec_id,
-            spuNo: product.spuNo,
-            categoryIds: product.categoryIds,
-            categoryNames: product.categoryNames,
-            productName: product.productName,
-            buyNum: buyNum,
-        }, currentSku);
+        const loginUser = window.loginUser || {};
+        const submitterId = String(loginUser.userId || '').trim();
+        if (!submitterId) {
+            this.utils.toast({ title: '未获取到当前登录用户，请刷新后重试', type: 'warning' });
+            return;
+        }
 
-        console.log('商品详情立即购买参数：', requestData);
-        this.utils.toast({
-            title: '已选择 ' + buyNum + ' 件商品',
-            type: 'success',
-            duration: 1500,
-        });
+        this.setState({ isCreatingOrder: true });
+        refreshJsx();
+        let createdOrderId = '';
+        try {
+            const latestSkuResponse = await this.dataSourceMap.getGoodsSkuListBySpu.load({
+                formUuid: 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK',
+                currentPage: 1,
+                pageSize: 1,
+                searchFieldJson: JSON.stringify({
+                    textField_mt17nqjb: product.spuNo,
+                }),
+            });
+            const latestSkuRecord = latestSkuResponse
+                && latestSkuResponse.data
+                && latestSkuResponse.data[0];
+            const latestSkuFormData = latestSkuRecord && latestSkuRecord.formData;
+            const latestSkuRows = latestSkuFormData
+                && latestSkuFormData.tableField_msygk2pq;
+            const latestSkuRowIndex = Array.isArray(latestSkuRows)
+                ? latestSkuRows.findIndex((row) => row.textField_mt9jn5sc === currentSku.skuId)
+                : -1;
+            const latestSkuRow = latestSkuRowIndex >= 0
+                ? latestSkuRows[latestSkuRowIndex]
+                : null;
+
+            if (!latestSkuRecord || !latestSkuRow) {
+                throw new Error('未查询到当前 SKU，请刷新商品详情后重试');
+            }
+
+            const latestAvailableStock = Number(latestSkuRow.numberField_msymrpxc);
+            const latestLockedStock = Number(latestSkuRow.numberField_msymrpxd || 0);
+            const latestUnitPrice = Number(latestSkuRow.numberField_msymrpxb);
+            if (!Number.isFinite(latestAvailableStock) || latestAvailableStock < buyNum) {
+                throw new Error('当前 SKU 库存不足，请刷新后重新选择');
+            }
+            if (!Number.isFinite(latestLockedStock) || !Number.isFinite(latestUnitPrice)) {
+                throw new Error('当前 SKU 的库存或价格数据异常');
+            }
+
+            const orderStartTime = Date.now();
+            const payableAmount = Math.round((latestUnitPrice * buyNum + Number.EPSILON) * 100) / 100;
+            const response = await this.dataSourceMap.createPendingOrder.load({
+                formUuid: 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL',
+                appType: 'APP_VZ5VTLROLBD0JJKKLROD',
+                formDataJson: JSON.stringify({
+                    textField_mt2mw548: submitterId,
+                    radioField_mt2mw54h: '待支付',
+                    dateField_mt6szq75: orderStartTime,
+                    dateField_mt2mw54j: orderStartTime + 10 * 60 * 1000,
+                    radioField_mt8fx6mi: '未关闭',
+                    radioField_mt9fft19: '否',
+                    numberField_mt2mw54b: payableAmount,
+                    numberField_mtglxtt3: 0,
+                }),
+            });
+
+            const orderFormInstId = String(response || '').trim();
+            if (!orderFormInstId) {
+                throw new Error('创建订单未返回记录实例 ID');
+            }
+
+            const orderRecord = await this.dataSourceMap.getOrderByFormInstId.load({
+                formInstId: orderFormInstId,
+            });
+            const orderId = String(
+                orderRecord
+                && orderRecord.formData
+                && orderRecord.formData.serialNumberField_mt2mw545
+                || ''
+            ).trim();
+
+            if (!orderId) {
+                console.error('[商品详情] 订单记录详情：', orderRecord);
+                throw new Error('未获取到订单业务流水号');
+            }
+            createdOrderId = orderId;
+
+            const orderDetailFormInstId = String(
+                await this.dataSourceMap.createOrderDetail.load({
+                    formUuid: 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN',
+                    appType: 'APP_VZ5VTLROLBD0JJKKLROD',
+                    formDataJson: JSON.stringify({
+                        textField_mt7zg4f3: orderId,
+                        textField_mt9xddqu: product.spuNo,
+                        textField_mt9i74jf: currentSku.skuId,
+                        textField_mt9i74jg: product.productName,
+                        textField_mt9i74jh: product.categoryNames,
+                        numberField_mt9i74jj: latestUnitPrice,
+                        numberField_mt9i74jl: buyNum,
+                        textField_mt9i74jk: latestSkuRow.textField_msygk2pr || currentSku.attrText,
+                        imageField_mtglpdws: latestSkuRow.imageField_mt2mwxv8 || '[]',
+                        numberField_mtglpdwt: payableAmount,
+                        radioField_mt8fx6mi: '未关闭',
+                    }),
+                }) || ''
+            ).trim();
+
+            if (!orderDetailFormInstId) {
+                throw new Error('创建订单明细未返回记录实例 ID');
+            }
+
+            const updatedSkuRows = latestSkuRows.map((row, index) => (
+                index === latestSkuRowIndex
+                    ? Object.assign({}, row, {
+                        numberField_msymrpxc: latestAvailableStock - buyNum,
+                        numberField_msymrpxd: latestLockedStock + buyNum,
+                    })
+                    : row
+            ));
+            await this.dataSourceMap.updateSkuStock.load({
+                formInstId: latestSkuRecord.formInstId,
+                updateFormDataJson: JSON.stringify({
+                    tableField_msygk2pq: updatedSkuRows,
+                }),
+            });
+
+            console.log('[商品详情] 下单完成：', {
+                orderFormInstId: orderFormInstId,
+                orderId: orderId,
+                orderDetailFormInstId: orderDetailFormInstId,
+            });
+            window.location.href = window.location.origin
+                + '/APP_VZ5VTLROLBD0JJKKLROD/preview/FORM-01464CAE858D4323956BD131C332AB9F7IOM?orderId='
+                + encodeURIComponent(orderId);
+        } catch (error) {
+            console.error('[商品详情] 创建待支付订单失败：', error);
+            this.utils.toast({
+                title: createdOrderId
+                    ? '订单 ' + createdOrderId + ' 未完成，请联系管理员处理'
+                    : '订单创建失败，请查看控制台后重试',
+                type: 'error',
+            });
+        } finally {
+            this.setState({ isCreatingOrder: false });
+            refreshJsx();
+        }
     };
 
     /** 从首页进入详情页时，返回浏览器历史中的首页。 */
@@ -300,10 +433,10 @@ function render() {
                         </button>
                         <button
                             class="product-detail-buy-button"
-                            disabled={isOutOfStock || isOffShelf}
+                            disabled={isOutOfStock || isOffShelf || isCreatingOrder}
                             onClick={onBuy}
                         >
-                            {isOffShelf ? '商品已下架' : (isOutOfStock ? '暂时缺货' : '立即购买')}
+                            {isCreatingOrder ? '创建订单中...' : (isOffShelf ? '商品已下架' : (isOutOfStock ? '暂时缺货' : '立即购买'))}
                         </button>
                     </div>
                 </div>

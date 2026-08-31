@@ -1,0 +1,14 @@
+{
+  "名称": "getOrderByFormInstId",
+  "描述": "根据订单记录实例 ID 查询订单业务流水号",
+  "自动加载": "否",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/getFormDataById.json",
+  "请求方式": "GET",
+  "请求参数": {
+    "formInstId": ""
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}

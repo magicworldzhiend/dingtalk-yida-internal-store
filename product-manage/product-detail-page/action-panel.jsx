@@ -91,12 +91,16 @@ async function getGoodsSkuListBySpu(spu, instance) {
     const productDetails = {
         // 规格表的主键ID
         spec_id: instanceObj.formData.serialNumberField_mt0u1j9w,
+        // SKU 表记录实例 ID；更新规格明细子表时必须使用该值。
+        skuFormInstId: instanceObj.formInstId || "",
+        // 锁定库存时必须整体回写，避免仅提交一行覆盖其他 SKU。
+        skuDetailRows: specTableRows,
         // 规格列表
         attrList: tableRows.map((row) => {
             const attr = row.textField_msymrpxg || "";
             const valueStr = row.textareaField_msymrpxh || "";
             const value = valueStr
-                .split("，")
+                .split(/[，,]/)
                 .map((item) => item.trim())
                 .filter(Boolean);
             return {
@@ -105,7 +109,7 @@ async function getGoodsSkuListBySpu(spu, instance) {
             };
         }),
         // SKU明细列表
-        attrValueList: specTableRows.map((row) => {
+        attrValueList: specTableRows.map((row, rowIndex) => {
             let imageList = [];
             try {
                 const imgJsonStr = row.imageField_mt2mwxv8 || "[]";
@@ -129,9 +133,12 @@ async function getGoodsSkuListBySpu(spu, instance) {
                 skuId: row.textField_mt9jn5sc || "",
                 attrText: row.textField_msygk2pr || "",
                 imageList: imageList,
+                imageValue: row.imageField_mt2mwxv8 || "[]",
                 price: row.numberField_msymrpxb || 0,
                 totalStock: row.numberField_mt81ft78 || 0,
                 availableStock: row.numberField_msymrpxc || 0,
+                lockedStock: row.numberField_msymrpxd || 0,
+                skuRowIndex: rowIndex,
             };
         }),
     };

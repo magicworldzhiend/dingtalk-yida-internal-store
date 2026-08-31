@@ -1,0 +1,16 @@
+{
+  "名称": "createPendingOrder",
+  "描述": "创建待支付订单，响应保持原样以核验订单流水号位置",
+  "自动加载": "否",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/saveFormData.json",
+  "请求方式": "POST",
+  "请求参数": {
+    "formUuid": "FORM-F7AEAE3939C14A4696786991D78FB19E85EL",
+    "appType": "APP_VZ5VTLROLBD0JJKKLROD",
+    "formDataJson": ""
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}
