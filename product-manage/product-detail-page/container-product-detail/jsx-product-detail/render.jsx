@@ -31,7 +31,8 @@ function render() {
         : null;
     const previewSku = currentSku || matchedSkuList[0] || attrValueList[0] || {};
     const showPrice = Number(previewSku.price || 0);
-    const totalPrice = showPrice * buyNum;
+    const totalPrice = (Math.round((showPrice * buyNum + Number.EPSILON) * 100) / 100)
+        .toFixed(2);
     const availableStock = Number(previewSku.availableStock || 0);
     const isOutOfStock = availableStock <= 0;
     const productName = product.productName || '商品详情';
