@@ -1,0 +1,364 @@
+.pending-payment-page {
+    display: grid;
+    gap: 12px;
+    /* PC 端为固定支付栏预留可滚动空间，避免订单末项被遮挡。 */
+    padding-bottom: 40px;
+    box-sizing: border-box;
+}
+
+.pending-payment-header,
+.pending-payment-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(31, 41, 55, 0.05);
+}
+
+.pending-payment-header {
+    padding: 20px 24px;
+}
+
+.pending-payment-header h1,
+.pending-payment-card h2 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.pending-payment-header h1 {
+    font-size: 24px;
+}
+
+.pending-payment-header p,
+.pending-payment-card p {
+    margin: 8px 0 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pending-payment-card {
+    padding: 20px 24px;
+}
+
+.pending-payment-card-label {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pending-payment-countdown {
+    display: block;
+    margin-top: 8px;
+    color: #e5484d;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.pending-payment-product-card {
+    display: flex;
+    gap: 16px;
+}
+
+.pending-payment-product-image,
+.pending-payment-image-placeholder {
+    display: flex;
+    flex: 0 0 112px;
+    width: 112px;
+    height: 112px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    object-fit: cover;
+    object-position: center;
+}
+
+.pending-payment-image-placeholder {
+    background: #edf1f5;
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.pending-payment-product-content {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.pending-payment-product-content h2 {
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pending-payment-product-detail {
+    display: flex;
+    margin-top: auto;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pending-payment-product-detail strong {
+    color: #e5484d;
+    font-size: 18px;
+}
+
+.pending-payment-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.pending-payment-section-heading h2 {
+    font-size: 16px;
+}
+
+.pending-payment-section-heading span {
+    color: #8f959e;
+    font-size: 13px;
+}
+
+.pending-payment-sku-preview {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border: 1px solid #eef0f3;
+    border-radius: 10px;
+    background: #f5f6f8;
+}
+
+.pending-payment-sku-preview img,
+.pending-payment-sku-preview-empty {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    object-position: center;
+}
+
+.pending-payment-sku-preview-empty {
+    color: #8f959e;
+    font-size: 14px;
+}
+
+.pending-payment-method-card,
+.pending-payment-meta-card {
+    display: grid;
+    gap: 16px;
+}
+
+.pending-payment-method-card h2 {
+    font-size: 16px;
+}
+
+.pending-payment-method-list {
+    display: grid;
+    gap: 10px;
+}
+
+.pending-payment-method-row {
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 12px;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.pending-payment-method-row:hover {
+    position: relative;
+    z-index: 1;
+    border-color: #91caff;
+    background: #e6f4ff;
+    transform: scale(1.03);
+}
+
+.pending-payment-method-row-active {
+    border-color: #1677ff;
+    background: #e6f4ff;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.12);
+}
+
+.pending-payment-method-row:disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
+}
+
+.pending-payment-method-icon {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #1677ff;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pending-payment-method-check {
+    min-width: 20px;
+    margin-left: auto;
+    color: #1677ff;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.pending-payment-meta-card div {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pending-payment-meta-card strong {
+    color: #374151;
+    font-weight: 500;
+    text-align: right;
+}
+
+.pending-payment-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    box-sizing: border-box;
+    min-height: 68px;
+    padding: 12px 0;
+    border-top: 1px solid #eef0f3;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -6px 20px rgba(31, 35, 41, 0.08);
+    backdrop-filter: blur(10px);
+}
+
+.pending-payment-bar-content {
+    display: flex;
+    width: calc(100% - 24px);
+    max-width: 1200px;
+    box-sizing: border-box;
+    margin: 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.pending-payment-bar-content span {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pending-payment-bar-content strong {
+    margin-left: 8px;
+    color: #e5484d;
+    font-size: 22px;
+}
+
+.pending-payment-bar-content button {
+    min-width: 128px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: #1677ff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.pending-payment-bar-content button:disabled {
+    background: #b9c1cc;
+    cursor: not-allowed;
+}
+
+.pending-payment-bar-content button:not(:disabled):hover {
+    background: #4096ff;
+    box-shadow: 0 6px 14px rgba(22, 119, 255, 0.24);
+    transform: scale(1.03);
+}
+
+.pending-payment-empty {
+    min-height: 260px;
+    place-items: center;
+}
+
+.pending-payment-empty-card {
+    width: min(100%, 520px);
+    text-align: center;
+}
+
+@media screen and (max-width: 767px) {
+    .pending-payment-page {
+        /* 为固定支付栏及 iPhone 底部安全区预留实际可滚动空间，避免末项被遮挡。 */
+        box-sizing: border-box;
+        padding: 4px 0 calc(64px + env(safe-area-inset-bottom));
+        gap: 4px;
+    }
+
+    .pending-payment-header,
+    .pending-payment-card {
+        border-radius: 8px;
+    }
+
+    .pending-payment-header,
+    .pending-payment-card {
+        padding: 14px 12px;
+    }
+
+    .pending-payment-header h1 {
+        font-size: 20px;
+    }
+
+    .pending-payment-product-card {
+        gap: 10px;
+    }
+
+    .pending-payment-product-image,
+    .pending-payment-image-placeholder {
+        flex-basis: 88px;
+        width: 88px;
+        height: 88px;
+    }
+
+    .pending-payment-sku-preview {
+        border-radius: 8px;
+    }
+
+    .pending-payment-product-detail {
+        display: grid;
+        gap: 4px;
+        justify-content: start;
+    }
+
+    .pending-payment-bar-content {
+        width: calc(100% - 20px);
+    }
+
+    .pending-payment-bar {
+        min-height: 60px;
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .pending-payment-bar-content button {
+        min-width: 112px;
+        min-height: 40px;
+    }
+}

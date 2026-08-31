@@ -1,0 +1,333 @@
+const DEFAULT_DEBUG_ORDER_ID = '17920260831135120';
+const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
+
+/**
+ * 从当前页面地址读取订单业务主键。
+ *
+ * @param {Object} page 页面上下文
+ * @returns {String} 订单业务主键；不存在时返回空字符串
+ */
+function getOrderId(page) {
+    const urlParams = page.utils.getUrlParams() || {};
+    return String(urlParams.orderId || DEFAULT_DEBUG_ORDER_ID).trim();
+}
+
+/**
+ * 将宜搭图片字段转换为可展示的图片地址。
+ *
+ * @param {String|Array} imageValue 图片字段值
+ * @returns {String} 可展示的图片地址；无图片时返回空字符串
+ */
+function resolveImageUrl(imageValue) {
+    if (!imageValue) {
+        return '';
+    }
+
+    try {
+        const imageList = Array.isArray(imageValue)
+            ? imageValue
+            : JSON.parse(String(imageValue));
+        const image = Array.isArray(imageList) ? imageList[0] : null;
+        const imageUrl = image && (image.downloadUrl || image.url || image.previewUrl);
+
+        if (!imageUrl) {
+            return '';
+        }
+
+        return /^https?:\/\//i.test(imageUrl)
+            ? imageUrl
+            : YIDA_OSS_PREFIX + imageUrl;
+    } catch (error) {
+        return '';
+    }
+}
+
+/**
+ * 将订单与订单明细查询结果转换为待付款页面状态。
+ *
+ * @param {Object} orderResponse 订单表查询响应
+ * @param {Object} orderDetailResponse 订单明细表查询响应
+ * @returns {Object|null} 页面订单数据；未查询到完整订单时返回空值
+ */
+function buildPendingPaymentData(orderResponse, orderDetailResponse) {
+    const orderRecord = orderResponse && orderResponse.data && orderResponse.data[0];
+    const orderDetailRecord = orderDetailResponse
+        && orderDetailResponse.data
+        && orderDetailResponse.data[0];
+
+    if (!orderRecord || !orderDetailRecord) {
+        return null;
+    }
+
+    const orderFormData = orderRecord.formData || {};
+    const orderDetailFormData = orderDetailRecord.formData || {};
+    const orderId = orderFormData.serialNumberField_mt2mw545 || '';
+    const orderDetailOrderId = orderDetailFormData.textField_mt7zg4f3 || '';
+    const timeoutCloseTime = orderFormData.dateField_mt2mw54j;
+
+    if (!orderId || orderId !== orderDetailOrderId || !Number.isFinite(Number(timeoutCloseTime))) {
+        return null;
+    }
+
+    return {
+        order: {
+            orderId: orderId,
+            formInstId: orderRecord.formInstId || '',
+            status: orderFormData.radioField_mt2mw54h || '',
+            payableAmount: orderFormData.numberField_mt2mw54b,
+            paymentMethod: orderFormData.radioField_mtgliziq || '',
+            submitTime: orderFormData.dateField_mt6szq75,
+            timeoutCloseTime: timeoutCloseTime,
+        },
+        orderDetail: {
+            imageUrl: resolveImageUrl(orderDetailFormData.imageField_mtglpdws),
+            productName: orderDetailFormData.textField_mt9i74jg || '',
+            specification: orderDetailFormData.textField_mt9i74jk || '',
+            unitPrice: orderDetailFormData.numberField_mt9i74jj,
+            quantity: orderDetailFormData.numberField_mt9i74jl,
+        },
+    };
+}
+
+/**
+ * 按订单的绝对超时关闭时间刷新待付款倒计时。
+ *
+ * @param {Object} page 页面上下文
+ * @param {Number|String} timeoutCloseTime 订单超时关闭时间
+ */
+function refreshPaymentCountdown(page, timeoutCloseTime) {
+    const remainingMilliseconds = new Date(timeoutCloseTime).getTime() - Date.now();
+
+    if (remainingMilliseconds <= 0) {
+        page.setState({
+            remainingMilliseconds: 0,
+            pageStatus: 'expired',
+        });
+        return;
+    }
+
+    page.setState({
+        remainingMilliseconds: remainingMilliseconds,
+        pageStatus: 'loaded',
+    });
+
+    page.pendingPaymentCountdownTimer = window.setTimeout(() => {
+        refreshPaymentCountdown(page, timeoutCloseTime);
+    }, 1000);
+}
+
+/**
+ * 刷新待付款 JSX，确保异步状态即时反映到页面按钮与选择项。
+ *
+ * @param {Object} page 页面上下文
+ */
+function refreshPendingPaymentJsx(page) {
+    const jsxComponent = page.$('jsx_mtgm8ahr');
+    if (jsxComponent) {
+        jsxComponent.forceUpdate();
+    }
+}
+
+/**
+ * 让 PC 端固定支付栏与待付款内容区域的实际边界保持对齐。
+ *
+ * 固定定位元素不能继承 Container 的宽度与左边界；页面侧栏或窗口尺寸变化时，
+ * 通过实时边界重新计算，移动端则沿用 CSS 全宽支付栏。
+ */
+export function initPendingPaymentPurchaseBarAlignment() {
+    const pageContext = this;
+    let retryCount = 0;
+    let animationFrameId = null;
+
+    function clearPurchaseBarPosition(purchaseBar) {
+        purchaseBar.style.removeProperty('left');
+        purchaseBar.style.removeProperty('right');
+        purchaseBar.style.removeProperty('width');
+    }
+
+    function updatePurchaseBarPosition() {
+        animationFrameId = null;
+
+        const pageElement = document.querySelector('.pending-payment-page');
+        const purchaseBar = document.querySelector('.pending-payment-bar');
+        if (!pageElement || !purchaseBar) {
+            return;
+        }
+
+        if (window.matchMedia('(max-width: 767px)').matches) {
+            clearPurchaseBarPosition(purchaseBar);
+            return;
+        }
+
+        const pageRect = pageElement.getBoundingClientRect();
+        if (pageRect.width <= 0) {
+            return;
+        }
+
+        purchaseBar.style.left = pageRect.left + 'px';
+        purchaseBar.style.right = 'auto';
+        purchaseBar.style.width = pageRect.width + 'px';
+    }
+
+    function schedulePurchaseBarPosition() {
+        if (animationFrameId !== null) {
+            return;
+        }
+        animationFrameId = window.requestAnimationFrame(updatePurchaseBarPosition);
+    }
+
+    function bindPurchaseBarPosition() {
+        const pageElement = document.querySelector('.pending-payment-page');
+        const purchaseBar = document.querySelector('.pending-payment-bar');
+        if (!pageElement || !purchaseBar) {
+            if (retryCount < 40) {
+                retryCount += 1;
+                window.setTimeout(bindPurchaseBarPosition, 250);
+            }
+            return;
+        }
+
+        if (window.ResizeObserver) {
+            pageContext.pendingPaymentPurchaseBarResizeObserver = new window.ResizeObserver(
+                schedulePurchaseBarPosition
+            );
+            pageContext.pendingPaymentPurchaseBarResizeObserver.observe(pageElement);
+        }
+
+        window.addEventListener('resize', schedulePurchaseBarPosition);
+        window.addEventListener('orientationchange', schedulePurchaseBarPosition);
+        document.addEventListener('transitionend', schedulePurchaseBarPosition, true);
+        schedulePurchaseBarPosition();
+    }
+
+    bindPurchaseBarPosition();
+}
+
+/**
+ * 查询订单与订单明细，并写入待付款页面展示状态。
+ *
+ * @param {Object} page 页面上下文
+ * @param {String} orderId 订单业务主键
+ * @returns {Promise<void>} 查询完成结果
+ */
+async function loadRawOrderData(page, orderId) {
+    const orderResponse = await page.dataSourceMap.getOrderById.load({
+        formUuid: 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL',
+        currentPage: 1,
+        pageSize: 1,
+        searchFieldJson: JSON.stringify({
+            serialNumberField_mt2mw545: orderId,
+        }),
+    });
+
+    const orderDetailResponse = await page.dataSourceMap.getOrderDetailByOrderId.load({
+        formUuid: 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN',
+        currentPage: 1,
+        pageSize: 1,
+        searchFieldJson: JSON.stringify({
+            textField_mt7zg4f3: orderId,
+        }),
+    });
+
+    const pendingPaymentData = buildPendingPaymentData(orderResponse, orderDetailResponse);
+    if (!pendingPaymentData) {
+        page.setState({ pageStatus: 'not-found' });
+        return;
+    }
+
+    page.setState({
+        order: pendingPaymentData.order,
+        orderDetail: pendingPaymentData.orderDetail,
+        selectedPaymentMethod: pendingPaymentData.order.paymentMethod,
+        isSubmittingPayment: false,
+    });
+    refreshPaymentCountdown(page, pendingPaymentData.order.timeoutCloseTime);
+}
+
+/**
+ * 初始化待付款页面的路由状态。
+ *
+ * 本阶段仅搭建页面骨架。订单与订单明细数据源完成配置后，
+ * 再根据 orderId 加载并写入页面状态。DEFAULT_DEBUG_ORDER_ID 仅用于
+ * 开发调试，正式发布前必须移除，避免无路由参数时展示测试订单。
+ */
+export async function didMount() {
+    const orderId = getOrderId(this);
+
+    this.setState({
+        orderId: orderId,
+        pageStatus: 'loading',
+        order: null,
+        orderDetail: null,
+        selectedPaymentMethod: '',
+        isSubmittingPayment: false,
+    });
+
+    // 已确认的真实画布 Container：div_mtgm8ahq。
+    // 后续仅在该 Container 下挂载订单支付 JSX，不新增虚构层级。
+    initPendingPaymentPurchaseBarAlignment.call(this);
+    try {
+        await loadRawOrderData(this, orderId);
+    } catch (error) {
+        console.error('[待付款页] 查询订单失败：', error);
+        this.setState({ pageStatus: 'load-failed' });
+    }
+}
+
+/**
+ * 保存用户在待付款页最终选择的支付方式。
+ *
+ * 支付方式写回成功后才允许进入在线收款流程；当前尚未接入在线收款，
+ * 因此本方法只完成写回与结果提示，不得伪造支付成功。
+ */
+export async function onConfirmPayment() {
+    const order = this.state.order || {};
+    const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
+
+    if (this.state.pageStatus !== 'loaded' || order.status !== '待支付') {
+        this.utils.toast({
+            title: '当前订单不可支付，请刷新后重试。',
+            type: 'warning',
+        });
+        return;
+    }
+
+    if (!order.formInstId || !selectedPaymentMethod) {
+        this.utils.toast({
+            title: '未获取到订单或支付方式，请刷新后重试。',
+            type: 'warning',
+        });
+        return;
+    }
+
+    this.setState({ isSubmittingPayment: true });
+    refreshPendingPaymentJsx(this);
+
+    try {
+        await this.dataSourceMap.updateOrderPaymentMethod.load({
+            formInstId: order.formInstId,
+            updateFormDataJson: JSON.stringify({
+                radioField_mtgliziq: selectedPaymentMethod,
+            }),
+        });
+
+        this.setState({
+            order: Object.assign({}, order, {
+                paymentMethod: selectedPaymentMethod,
+            }),
+        });
+        this.utils.toast({
+            title: '支付方式已保存，正在准备支付。',
+            type: 'success',
+        });
+    } catch (error) {
+        console.error('[待付款页] 更新支付方式失败：', error);
+        this.utils.toast({
+            title: '支付方式保存失败，请稍后重试。',
+            type: 'error',
+        });
+    } finally {
+        this.setState({ isSubmittingPayment: false });
+        refreshPendingPaymentJsx(this);
+    }
+}
