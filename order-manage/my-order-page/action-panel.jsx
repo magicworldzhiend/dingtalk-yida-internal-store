@@ -1,6 +1,7 @@
 const ORDER_FORM_UUID = 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL';
 const ORDER_DETAIL_FORM_UUID = 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN';
 const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
+const ORDER_DETAIL_PAGE_ID = 'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8';
 const MY_ORDER_JSX_ID = 'jsx_mti8yqbo';
 const ORDER_PAGE_SIZE = 10;
 const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
@@ -288,9 +289,13 @@ export function confirmOrderClaim(order) {
     });
 }
 
-/** 预留订单详情入口。 */
-export function openMyOrderDetail() {
-    this.utils.toast({title: '订单详情功能即将上线', type: 'warning'});
+/** 打开指定订单的详情页面。 */
+export function openMyOrderDetail(order) {
+    if (!order || !order.orderId) {
+        this.utils.toast({title: '未获取到订单编号，请刷新订单列表后重试', type: 'warning'});
+        return;
+    }
+    this.utils.router.push(ORDER_DETAIL_PAGE_ID, {orderNo: order.orderId});
 }
 
 /** 返回进入页面前的首页地址。 */
