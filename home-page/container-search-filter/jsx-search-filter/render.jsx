@@ -21,6 +21,11 @@ function render(me, state, data, ctx) {
         || pageState.appliedParentCategoryId
         || pageState.appliedCategoryId
     );
+    const pendingPaymentOrderCount = Number(pageState.pendingPaymentOrderCount || 0);
+    const pendingPaymentOrderBadge = Number.isFinite(pendingPaymentOrderCount)
+        && pendingPaymentOrderCount > 0
+        ? (pendingPaymentOrderCount > 99 ? '99+' : String(pendingPaymentOrderCount))
+        : '';
 
     const selectedParentCategory = categoryList.find(function (item) {
         return item.value === selectedParentCategoryId;
@@ -149,6 +154,18 @@ function render(me, state, data, ctx) {
         updateState({
             selectedCategoryId: categoryId,
             activeCategoryMenu: ''
+        });
+    }
+
+    /**
+     * 订单列表尚未上线，入口暂时仅提示用户。
+     *
+     * @returns {void}
+     */
+    function openMyOrders() {
+        pageContext.utils.toast({
+            title: '我的订单功能即将上线',
+            type: 'info'
         });
     }
 
@@ -429,6 +446,53 @@ function render(me, state, data, ctx) {
                     <circle cx="15" cy="12" r="2"></circle>
                     <circle cx="11" cy="18" r="2"></circle>
                 </svg>
+            </button>
+
+            <button
+                type="button"
+                class="home-filter-icon-action home-order-entry"
+                title="我的订单"
+                aria-label={pendingPaymentOrderBadge
+                    ? '我的订单，' + pendingPaymentOrderBadge + ' 笔待支付'
+                    : '我的订单'}
+                onClick={() => openMyOrders()}
+                style={{
+                    flex: '0 0 auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    width: isMobile ? '42px' : '104px',
+                    height: '42px',
+                    padding: isMobile ? '0' : '0 12px',
+                    border: '1px solid #D9DDE3',
+                    borderRadius: '8px',
+                    color: '#1677FF',
+                    backgroundColor: '#FFFFFF',
+                    whiteSpace: 'nowrap'
+                }}
+            >
+                <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21V3z"></path>
+                    <path d="M9 8h6"></path>
+                    <path d="M9 12h6"></path>
+                </svg>
+                {!isMobile && <span>我的订单</span>}
+                {pendingPaymentOrderBadge && (
+                    <span class="home-order-pending-badge" aria-hidden="true">
+                        {pendingPaymentOrderBadge}
+                    </span>
+                )}
             </button>
 
             <div

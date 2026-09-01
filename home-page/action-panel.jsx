@@ -9,12 +9,50 @@
 
 
 /**
- * 首页完成首次渲染后，分别启动 Banner 轮播和商品触底分页。
- * 两个初始化必须同时保留，避免其中一项功能在覆盖页面 JS 时失效。
+ * 首页完成首次渲染后，分别启动 Banner 轮播、商品触底分页和待支付订单数量查询。
+ * 三个初始化必须同时保留，避免其中一项功能在覆盖页面 JS 时失效。
  */
 export function didMount() {
     initHomeSwiper.call(this);
     initHomeProductLoadMore.call(this);
+    loadPendingPaymentOrderCount.call(this);
+}
+
+/**
+ * 查询当前登录用户的待支付订单数量，供首页“我的订单”入口展示红点。
+ * 查询失败时隐藏红点，不影响首页商品浏览。
+ *
+ * @returns {Promise<void>} 查询完成后的处理结果。
+ */
+export function loadPendingPaymentOrderCount() {
+    const page = this;
+    const submitterId = String((window.loginUser || {}).userId || '').trim();
+
+    if (!submitterId || !page.dataSourceMap || !page.dataSourceMap.getPendingPaymentOrderCount) {
+        page.setState({ pendingPaymentOrderCount: 0 });
+        return Promise.resolve();
+    }
+
+    return page.dataSourceMap.getPendingPaymentOrderCount.load({
+        formUuid: 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL',
+        currentPage: 1,
+        // 仅使用 totalCount，无需加载全部待支付订单记录。
+        pageSize: 1,
+        searchFieldJson: JSON.stringify({
+            textField_mt2mw548: submitterId,
+            radioField_mt2mw54h: '待支付'
+        })
+    }).then((response) => {
+        const result = response && response.result ? response.result : response;
+        const count = Number(result && result.totalCount || 0);
+
+        page.setState({
+            pendingPaymentOrderCount: Number.isFinite(count) && count > 0 ? count : 0
+        });
+    }).catch((error) => {
+        console.error('首页待支付订单数量查询失败', error);
+        page.setState({ pendingPaymentOrderCount: 0 });
+    });
 }
 
 

@@ -1,0 +1,17 @@
+{
+  "名称": "getPendingPaymentOrderCount",
+  "描述": "查询当前登录用户的待支付订单数量",
+  "自动加载": "否",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/searchFormDatas.json",
+  "请求方式": "GET",
+  "请求参数": {
+    "formUuid": "FORM-F7AEAE3939C14A4696786991D78FB19E85EL",
+    "currentPage": 1,
+    "pageSize": 1,
+    "searchFieldJson": ""
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}

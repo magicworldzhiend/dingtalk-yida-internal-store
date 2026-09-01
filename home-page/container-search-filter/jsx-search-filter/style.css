@@ -60,3 +60,24 @@
     background-color: #F0F6FF !important;
     transform: scale(1.03);
 }
+
+:root .home-order-pending-badge {
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border: 2px solid #FFFFFF;
+    border-radius: 10px;
+    color: #FFFFFF;
+    background-color: #F53F3F;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+}
