@@ -157,16 +157,16 @@ function render(me, state, data, ctx) {
         });
     }
 
-    /**
-     * 订单列表尚未上线，入口暂时仅提示用户。
-     *
-     * @returns {void}
-     */
+    /** 跳转至我的订单页面，并保存首页返回地址。 */
     function openMyOrders() {
-        pageContext.utils.toast({
-            title: '我的订单功能即将上线',
-            type: 'info'
-        });
+        try {
+            window.sessionStorage.setItem('internalStoreHomeUrl', window.location.href);
+        } catch (error) {
+            // 存储不可用时仍允许进入我的订单页。
+        }
+        pageContext.utils.router.push(
+            'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK'
+        );
     }
 
     /**

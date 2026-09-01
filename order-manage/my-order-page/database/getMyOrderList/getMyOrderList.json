@@ -1,0 +1,17 @@
+{
+  "名称": "getMyOrderList",
+  "描述": "获取我的订单列表",
+  "自动加载": "否",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/searchFormDatas.json",
+  "请求方式": "GET",
+  "请求参数": {
+    "formUuid": "FORM-F7AEAE3939C14A4696786991D78FB19E85EL",
+    "currentPage": 1,
+    "pageSize": 10,
+    "searchFieldJson": ""
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}

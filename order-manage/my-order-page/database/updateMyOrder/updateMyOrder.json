@@ -1,0 +1,15 @@
+{
+  "名称": "updateMyOrder",
+  "描述": "确认领取时更新订单状态",
+  "自动加载": "否",
+  "请求地址": "/dingtalk/web/APP_VZ5VTLROLBD0JJKKLROD/v1/form/updateFormData.json",
+  "请求方式": "POST",
+  "请求参数": {
+    "formInstId": "",
+    "updateFormDataJson": ""
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "didFetch": "见同名.jsx文件"
+  }
+}
