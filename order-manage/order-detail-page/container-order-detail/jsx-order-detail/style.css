@@ -98,8 +98,7 @@
 
 :root .order-detail-timeline {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 24px 8% 2px;
 }
 
@@ -107,61 +106,67 @@
     position: relative;
     display: grid;
     min-width: 0;
-    grid-template-rows: 18px auto auto;
+    grid-template-rows: 22px auto auto;
     gap: 6px;
     color: #8F959E;
     text-align: center;
 }
 
 :root .order-detail-timeline-dot {
+    position: relative;
     z-index: 1;
     justify-self: center;
-    width: 12px;
-    height: 12px;
-    border: 3px solid #FFFFFF;
+    align-self: center;
+    width: 10px;
+    height: 10px;
+    border: 0;
     border-radius: 50%;
     background: #D9DDE3;
-    box-shadow: 0 0 0 1px #D9DDE3;
+    box-shadow: none;
 }
 
 :root .order-detail-timeline-line {
     position: absolute;
-    top: 7px;
-    left: 50%;
-    width: 100%;
+    top: 10.5px;
+    left: calc(50% + 18px);
+    width: calc(100% - 36px);
     height: 1px;
     background: #D9DDE3;
 }
 
-:root .order-detail-timeline-item-complete .order-detail-timeline-dot, :root .order-detail-timeline-item-current .order-detail-timeline-dot {
+:root .order-detail-timeline-item-complete .order-detail-timeline-dot {
     background: #1677FF;
-    box-shadow: 0 0 0 1px #1677FF;
+}
+
+/* 当前阶段为“内点 + 外圈”，其余阶段保持纯实心点。 */
+:root .order-detail-timeline-item-current .order-detail-timeline-dot {
+    background: #1677FF;
+    /* 保留普通实心点尺寸，以蓝色阶段圈明确强调当前所处节点。 */
+    box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px #1677FF;
 }
 
 :root .order-detail-timeline-item-complete .order-detail-timeline-line {
     background: #91CAFF;
 }
 
-:root .order-detail-timeline-line-closed {
-    background: #F5A6A6 !important;
+:root .order-detail-timeline-line-closing {
+    background: linear-gradient(90deg, #91CAFF 0%, #E5484D 100%);
+}
+
+:root .order-detail-timeline-item-complete .order-detail-timeline-line-closing {
+    background: linear-gradient(90deg, #1677FF 0%, #E5484D 100%);
 }
 
 :root .order-detail-timeline-item-current strong {
     color: #1677FF;
 }
 
-:root .order-detail-timeline-item-finished .order-detail-timeline-dot {
-    background: #16A34A;
-    box-shadow: 0 0 0 1px #16A34A;
-}
-
-:root .order-detail-timeline-item-finished strong {
-    color: #16A34A;
-}
-
 :root .order-detail-timeline-item-closed .order-detail-timeline-dot {
     background: #E5484D;
-    box-shadow: 0 0 0 1px #E5484D;
+}
+
+:root .order-detail-timeline-item-current.order-detail-timeline-item-closed .order-detail-timeline-dot {
+    box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px #E5484D;
 }
 
 :root .order-detail-timeline-item-closed strong {
@@ -249,6 +254,22 @@
 :root .order-detail-status-wait-pay {
     background: #FFF7E8;
     color: #D46B08;
+}
+
+/* 基本信息中的待支付状态只保留文字颜色，避免与其他字段抢视觉重点。 */
+:root .order-detail-meta-grid .order-detail-status-wait-pay {
+    padding: 0;
+    background: transparent;
+}
+
+/* 基本信息的状态与其他字段文字对齐，不使用任何胶囊背景。 */
+:root .order-detail-meta-grid .order-detail-status {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: inherit;
 }
 
 :root .order-detail-status-wait-claim {
@@ -362,6 +383,190 @@
     text-align: center;
 }
 
+:root .order-detail-countdown {
+    display: flex;
+    margin: 20px 8% 0;
+    padding: 12px 16px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 8px;
+    background: #FFF7E8;
+    color: #D46B08;
+}
+
+:root .order-detail-countdown strong {
+    color: #E5484D;
+    font-size: 22px;
+    letter-spacing: 1px;
+}
+
+:root .order-detail-countdown em {
+    color: #8F6A38;
+    font-size: 12px;
+    font-style: normal;
+}
+
+:root .order-detail-goods-preview-card {
+    display: block;
+}
+
+:root .order-detail-goods-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    padding-top: 18px;
+}
+
+:root .order-detail-goods-preview img, :root .order-detail-goods-preview span {
+    display: flex;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #F5F6F8;
+    color: #8F959E;
+    object-fit: cover;
+    object-position: center;
+}
+
+:root .order-detail-payment-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    min-height: 68px;
+    padding: 12px 0;
+    border-top: 1px solid #EEF0F3;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 -6px 20px rgba(31, 35, 41, .08);
+    backdrop-filter: blur(10px);
+}
+
+:root .order-detail-payment-bar-content {
+    display: flex;
+    width: calc(100% - 24px);
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+:root .order-detail-payment-bar-content span {
+    color: #646A73;
+    font-size: 14px;
+}
+
+:root .order-detail-payment-bar-content strong {
+    margin-left: 8px;
+    color: #E5484D;
+    font-size: 22px;
+}
+
+:root .order-detail-payment-actions {
+    display: flex;
+    gap: 12px;
+}
+
+:root .order-detail-payment-actions button {
+    min-width: 128px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: #1677FF;
+    color: #FFF;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+:root .order-detail-payment-actions button:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+:root .order-detail-payment-actions button:not(:disabled):hover {
+    background: #4096FF;
+    box-shadow: 0 6px 14px rgba(22, 119, 255, .24);
+    transform: scale(1.03);
+}
+
+:root .order-detail-payment-actions .order-detail-cancel-button {
+    border: 1px solid #FFCCC7;
+    background: #FFF;
+    color: #E5484D;
+}
+
+:root .order-detail-payment-actions .order-detail-cancel-button:not(:disabled):hover {
+    background: #FFF1F0;
+    box-shadow: 0 4px 10px rgba(229, 72, 77, .14);
+}
+
+:root .order-detail-dialog-mask {
+    position: fixed;
+    z-index: 20;
+    inset: 0;
+    display: flex;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, .42);
+}
+
+:root .order-detail-dialog {
+    width: min(100%, 360px);
+    padding: 24px;
+    border-radius: 12px;
+    visibility: hidden;
+    opacity: 0;
+    background: #FFF;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, .2);
+    transition: opacity 160ms ease;
+}
+
+:root .order-detail-dialog h2, :root .order-detail-dialog p {
+    margin: 0;
+}
+
+:root .order-detail-dialog h2 {
+    font-size: 18px;
+}
+
+:root .order-detail-dialog p {
+    margin-top: 10px;
+    color: #646A73;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+:root .order-detail-dialog > div {
+    display: flex;
+    margin-top: 24px;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+:root .order-detail-dialog button {
+    min-width: 92px;
+    min-height: 38px;
+    border: 1px solid #D9DEE7;
+    border-radius: 7px;
+    background: #FFF;
+    color: #4B5563;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+:root .order-detail-dialog .order-detail-dialog-danger {
+    border-color: #E5484D;
+    background: #E5484D;
+    color: #FFF;
+}
+
 :root .order-detail-empty-card {
     margin: 48px auto;
     padding: 40px 28px;
@@ -411,7 +616,7 @@
 @media screen and (max-width: 767px) {
     :root .order-detail-page {
         gap: 4px;
-        padding: 4px 0 16px;
+        padding: 4px 0 calc(76px + env(safe-area-inset-bottom));
     }
 
     :root .order-detail-header, :root .order-detail-card, :root .order-detail-empty-card {
@@ -523,5 +728,45 @@
     :root .order-detail-goods-arrow {
         grid-column: 3;
         grid-row: 1 / span 2;
+    }
+
+    :root .order-detail-countdown {
+        margin: 14px 0 0;
+        padding: 10px;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+    }
+
+    :root .order-detail-countdown strong {
+        font-size: 19px;
+    }
+
+    :root .order-detail-goods-preview-card {
+        display: none;
+    }
+
+    :root .order-detail-payment-bar {
+        min-height: 60px;
+        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    }
+
+    :root .order-detail-payment-bar-content {
+        width: calc(100% - 20px);
+    }
+
+    :root .order-detail-payment-actions {
+        gap: 8px;
+    }
+
+    :root .order-detail-payment-actions button {
+        min-width: 94px;
+        min-height: 40px;
+        padding: 0 10px;
+        font-size: 14px;
+    }
+
+    :root .order-detail-dialog {
+        padding: 20px;
+        border-radius: 10px;
     }
 }

@@ -77,6 +77,7 @@ function buildPendingPaymentData(orderResponse, orderDetailResponse) {
             closeStatus: orderFormData.radioField_mt8fx6mi || '',
             payableAmount: orderFormData.numberField_mt2mw54b,
             paymentMethod: orderFormData.radioField_mtgliziq || '',
+            remark: orderFormData.textareaField_mt2mw54i || '',
             submitTime: orderFormData.dateField_mt6szq75,
             timeoutCloseTime: timeoutCloseTime,
         },
@@ -128,6 +129,23 @@ function refreshPendingPaymentJsx(page) {
     if (jsxComponent) {
         jsxComponent.forceUpdate();
     }
+}
+
+/** 将取消对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
+export function centerPendingPaymentCancelDialog() {
+    window.requestAnimationFrame(() => {
+        const dialog = document.querySelector('.pending-payment-dialog');
+        const pageElement = document.querySelector('.pending-payment-page');
+        if (!dialog || !pageElement) return;
+        dialog.style.removeProperty('transform');
+        const dialogRect = dialog.getBoundingClientRect();
+        const pageRect = pageElement.getBoundingClientRect();
+        const offsetX = Math.round(pageRect.left + pageRect.width / 2 - (dialogRect.left + dialogRect.width / 2));
+        const offsetY = Math.round(window.innerHeight / 2 - (dialogRect.top + dialogRect.height / 2));
+        dialog.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
+        dialog.style.visibility = 'visible';
+        dialog.style.opacity = '1';
+    });
 }
 
 /**
@@ -242,6 +260,7 @@ async function loadRawOrderData(page, orderId) {
         orderDetail: pendingPaymentData.orderDetail,
         selectedPaymentMethod: pendingPaymentData.order.paymentMethod,
         isSubmittingPayment: false,
+        orderRemark: pendingPaymentData.order.remark,
         isCancelDialogVisible: false,
         isCancellingOrder: false,
     });
@@ -265,6 +284,7 @@ export async function didMount() {
         orderDetail: null,
         selectedPaymentMethod: '',
         isSubmittingPayment: false,
+        orderRemark: '',
         isCancelDialogVisible: false,
         isCancellingOrder: false,
     });
@@ -289,12 +309,20 @@ export async function didMount() {
 export async function onConfirmPayment() {
     const order = this.state.order || {};
     const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
+    const orderRemark = String(typeof this.pendingPaymentRemarkDraft === 'string'
+        ? this.pendingPaymentRemarkDraft
+        : this.state.orderRemark || '');
 
     if (this.state.pageStatus !== 'loaded' || order.status !== '待支付') {
         this.utils.toast({
             title: '当前订单不可支付，请刷新后重试。',
             type: 'warning',
         });
+        return;
+    }
+
+    if (orderRemark.length > 150) {
+        this.utils.toast({title: '备注不能超过 150 字', type: 'warning'});
         return;
     }
 
@@ -314,12 +342,14 @@ export async function onConfirmPayment() {
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
                 radioField_mtgliziq: selectedPaymentMethod,
+                textareaField_mt2mw54i: orderRemark,
             }),
         });
 
         this.setState({
             order: Object.assign({}, order, {
                 paymentMethod: selectedPaymentMethod,
+                remark: orderRemark,
             }),
         });
         this.utils.toast({
@@ -361,6 +391,7 @@ export async function onCancelOrder() {
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
                 radioField_mt2mw54h: '已关闭',
+                radioField_mt8fx6mi: '已关闭（未释放库存）',
                 dateField_mt2qewds: closeTime,
                 radioField_mt9fft19: '否',
             }),
@@ -372,6 +403,7 @@ export async function onCancelOrder() {
             isCancelDialogVisible: false,
             order: Object.assign({}, order, {
                 status: '已关闭',
+                closeStatus: '已关闭（未释放库存）',
             }),
         });
         refreshPendingPaymentJsx(this);

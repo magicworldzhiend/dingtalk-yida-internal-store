@@ -12,6 +12,12 @@ function render() {
         return Number.isFinite(amount) ? amount.toFixed(2) : '--';
     }
 
+    function formatCountdown(value) {
+        const seconds = Math.floor(Math.max(0, Number(value) || 0) / 1000);
+        const pad = (number) => String(number).padStart(2, '0');
+        return pad(Math.floor(seconds / 3600)) + ':' + pad(Math.floor(seconds % 3600 / 60)) + ':' + pad(seconds % 60);
+    }
+
     /** 返回订单状态对应的视觉类名。 */
     function getStatusClass(status) {
         return 'order-detail-status order-detail-status-' + ({
@@ -25,29 +31,35 @@ function render() {
     /** 根据订单状态生成仅用于展示的进度节点。 */
     function getTimeline() {
         if (order.status === '待支付') {
-            return [{title: '待支付', time: order.createTime, state: 'current', lineTone: 'closed'}, {
-                title: '超时关闭',
-                time: order.timeoutCloseTime,
-                state: 'upcoming',
-                tone: 'closed'
-            }];
+            return [
+                {title: '待支付', time: order.createTime, state: 'current'},
+                {title: '待领用', state: 'upcoming'},
+                {title: '已完成', state: 'upcoming'}
+            ];
         }
+        // 支付前关闭时，第二节点替换为关闭结果；“已完成”仍保留为未到达的灰色节点。
         if (order.status === '已关闭' && (order.isTimeoutClosed || !order.paymentTime)) {
-            return [{title: '待支付', time: order.createTime, state: 'complete', lineTone: 'closed'}, {
-                title: '超时关闭',
-                time: order.closeTime,
-                state: 'current',
-                tone: 'closed'
-            }];
+            return [
+                {title: '待支付', time: order.createTime, state: 'complete', lineTone: 'closing'},
+                {title: order.isTimeoutClosed ? '已超时关闭' : '已关闭', time: order.closeTime, state: 'current', tone: 'closed'},
+                {title: '已完成', state: 'upcoming'}
+            ];
+        }
+        if (order.status === '已关闭') {
+            return [
+                {title: '待支付', time: order.createTime, state: 'complete'},
+                {title: '待领用', time: order.paymentTime, state: 'complete', lineTone: 'closing'},
+                {title: '已关闭', time: order.closeTime, state: 'current', tone: 'closed'}
+            ];
         }
         return [
             {title: '待支付', time: order.createTime, state: 'complete'},
-            {title: '待领用', time: order.paymentTime, state: order.status === '待领用' ? 'current' : 'complete', lineTone: order.status === '已关闭' ? 'closed' : ''},
+            {title: '待领用', time: order.paymentTime, state: order.status === '待领用' ? 'current' : 'complete'},
             {
-                title: order.status === '已关闭' ? '已关闭' : '已完成',
+                title: '已完成',
                 time: order.closeTime,
                 state: order.status === '待领用' ? 'upcoming' : 'current',
-                tone: order.status === '已关闭' ? 'closed' : order.status === '已完成' ? 'finished' : ''
+                tone: order.status === '已完成' ? 'finished' : ''
             }
         ];
     }
@@ -86,6 +98,10 @@ function render() {
                         <span class="order-detail-timeline-dot"></span>{index < timeline.length - 1 && <span
                         class={'order-detail-timeline-line' + (item.lineTone ? ' order-detail-timeline-line-' + item.lineTone : '')}></span>}<strong>{item.title}</strong><em>{page.formatOrderDetailDateTime(item.time)}</em>
                     </div>)}</div>
+                {order.status === '待支付' && <div class="order-detail-countdown">
+                    <span>剩余支付时间</span><strong>{formatCountdown(state.remainingPaymentMilliseconds)}</strong>
+                    <em>超时后订单将自动关闭</em>
+                </div>}
             </section>
             <section class="order-detail-card">
                 <div class="order-detail-section-heading"><h2>基本信息</h2></div>
@@ -137,6 +153,21 @@ function render() {
                             <path d="M9 18l6-6-6-6"></path>
                         </svg>
                     </button>)}</div> : <div class="order-detail-no-goods">暂无商品数据</div>}</section>
+            {goodsList.length ? <section class="order-detail-card order-detail-goods-preview-card">
+                <div class="order-detail-section-heading"><h2>商品明细图</h2><span>规格图片</span></div>
+                <div class="order-detail-goods-preview">{goodsList.map((goods, index) => goods.imageUrl ?
+                    <img key={goods.goodsId || index} src={goods.imageUrl} alt={goods.goodsName} decoding="async"/> :
+                    <span key={goods.goodsId || index}>暂无商品图片</span>)}</div>
+            </section> : null}
+            {order.status === '待支付' && <footer class="order-detail-payment-bar">
+                <div class="order-detail-payment-bar-content"><div><span>应付</span><strong>¥ {formatAmount(order.payableAmount)}</strong></div>
+                    <div class="order-detail-payment-actions"><button type="button" class="order-detail-cancel-button" disabled={state.isCancellingOrder} onClick={() => page.openCancelOrderDialog()}>取消订单</button>
+                        <button type="button" disabled={state.isCancellingOrder} onClick={() => page.goToPendingPayment()}>支付订单</button></div>
+                </div>
+            </footer>}
+            {state.isCancelDialogVisible && <div class="order-detail-dialog-mask" onClick={() => page.closeCancelOrderDialog()}>
+                <section class="order-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><h2>是否取消订单？</h2><p>取消后订单不可恢复，确定不再继续支付吗？</p><div><button type="button" disabled={state.isCancellingOrder} onClick={() => page.closeCancelOrderDialog()}>暂不取消</button><button type="button" class="order-detail-dialog-danger" disabled={state.isCancellingOrder} onClick={() => page.cancelPendingOrder()}>{state.isCancellingOrder ? '取消中...' : '确认取消'}</button></div></section>
+            </div>}
         </div>
     );
 }

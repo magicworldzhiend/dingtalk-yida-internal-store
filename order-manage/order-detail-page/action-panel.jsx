@@ -1,6 +1,7 @@
 const ORDER_FORM_UUID = 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL';
 const ORDER_DETAIL_FORM_UUID = 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN';
 const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
+const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
 const ORDER_DETAIL_JSX_ID = 'jsx_mt0wteuu';
 
 /** 将宜搭图片字段转换为可展示的图片地址。 */
@@ -31,6 +32,86 @@ function refreshOrderDetailJsx(page) {
     if (component) {
         component.forceUpdate();
     }
+}
+
+/** 将对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
+function centerDialogToPageContent(dialogSelector, pageSelector) {
+    window.requestAnimationFrame(() => {
+        const dialog = document.querySelector(dialogSelector);
+        const pageElement = document.querySelector(pageSelector);
+        if (!dialog || !pageElement) return;
+        dialog.style.removeProperty('transform');
+        const dialogRect = dialog.getBoundingClientRect();
+        const pageRect = pageElement.getBoundingClientRect();
+        const offsetX = Math.round(pageRect.left + pageRect.width / 2 - (dialogRect.left + dialogRect.width / 2));
+        const offsetY = Math.round(window.innerHeight / 2 - (dialogRect.top + dialogRect.height / 2));
+        dialog.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
+        dialog.style.visibility = 'visible';
+        dialog.style.opacity = '1';
+    });
+}
+
+/** 按订单绝对关闭时间刷新待支付倒计时。 */
+function refreshPaymentCountdown(page, timeoutCloseTime) {
+    const remainingMilliseconds = new Date(timeoutCloseTime).getTime() - Date.now();
+    if (remainingMilliseconds <= 0) {
+        page.setState({remainingPaymentMilliseconds: 0});
+        refreshOrderDetailJsx(page);
+        return;
+    }
+    page.setState({remainingPaymentMilliseconds: remainingMilliseconds});
+    refreshOrderDetailJsx(page);
+    page.orderDetailCountdownTimer = window.setTimeout(() => {
+        refreshPaymentCountdown(page, timeoutCloseTime);
+    }, 1000);
+}
+
+/** 让 PC 端固定支付栏与订单详情内容区域保持对齐。 */
+export function initOrderDetailPaymentBarAlignment() {
+    const page = this;
+    let retryCount = 0;
+    let animationFrameId = null;
+    const clearPosition = (bar) => {
+        bar.style.removeProperty('left');
+        bar.style.removeProperty('right');
+        bar.style.removeProperty('width');
+    };
+    const updatePosition = () => {
+        animationFrameId = null;
+        const pageElement = document.querySelector('.order-detail-page');
+        const bar = document.querySelector('.order-detail-payment-bar');
+        if (!pageElement || !bar) return;
+        if (window.matchMedia('(max-width: 767px)').matches) {
+            clearPosition(bar);
+            return;
+        }
+        const rect = pageElement.getBoundingClientRect();
+        if (rect.width > 0) {
+            bar.style.left = rect.left + 'px';
+            bar.style.right = 'auto';
+            bar.style.width = rect.width + 'px';
+        }
+    };
+    const schedulePosition = () => {
+        if (animationFrameId === null) animationFrameId = window.requestAnimationFrame(updatePosition);
+    };
+    const bindPosition = () => {
+        const pageElement = document.querySelector('.order-detail-page');
+        const bar = document.querySelector('.order-detail-payment-bar');
+        if (!pageElement || !bar) {
+            if (retryCount++ < 40) window.setTimeout(bindPosition, 250);
+            return;
+        }
+        if (window.ResizeObserver) {
+            page.orderDetailPaymentBarResizeObserver = new window.ResizeObserver(schedulePosition);
+            page.orderDetailPaymentBarResizeObserver.observe(pageElement);
+        }
+        window.addEventListener('resize', schedulePosition);
+        window.addEventListener('orientationchange', schedulePosition);
+        document.addEventListener('transitionend', schedulePosition, true);
+        schedulePosition();
+    };
+    bindPosition();
 }
 
 /** 查询当前订单的商品快照。 */
@@ -67,7 +148,7 @@ async function loadOrder(page, userId, orderNo) {
     }
     const data = record.formData || {};
     return {
-        orderNo: data.serialNumberField_mt2mw545 || String(orderNo), status: data.radioField_mt2mw54h || '',
+        formInstId: record.formInstId || '', orderNo: data.serialNumberField_mt2mw545 || String(orderNo), status: data.radioField_mt2mw54h || '',
         payableAmount: Number(data.numberField_mt2mw54b || 0), createTime: data.dateField_mt6szq75 || '',
         paymentTime: data.dateField_mt2mw54k || '', closeTime: data.dateField_mt2qewds || '',
         timeoutCloseTime: data.dateField_mt2mw54j || '', isTimeoutClosed: data.radioField_mt9fft19 === '是',
@@ -95,7 +176,7 @@ export async function didMount() {
         refreshOrderDetailJsx(this);
         return;
     }
-    this.setState({orderDetailPageStatus: 'loading', order: null, goodsList: []});
+    this.setState({orderDetailPageStatus: 'loading', order: null, goodsList: [], remainingPaymentMilliseconds: 0, isCancelDialogVisible: false, isCancellingOrder: false});
     refreshOrderDetailJsx(this);
     try {
         const userId = this.utils.getLoginUserId();
@@ -110,12 +191,78 @@ export async function didMount() {
                 customerName: this.utils.getLoginUserName() || '--',
                 departmentName: departmentName
             });
+            if (order.status === '待支付') {
+                refreshPaymentCountdown(this, order.timeoutCloseTime);
+                initOrderDetailPaymentBarAlignment.call(this);
+            }
         }
     } catch (error) {
         console.error('[订单详情] 加载失败', error);
         this.setState({orderDetailPageStatus: 'load-failed'});
     }
     refreshOrderDetailJsx(this);
+}
+
+/** 跳转至既有待支付页，继续选择支付方式并进入支付流程。 */
+export function goToPendingPayment() {
+    const order = this.state.order || {};
+    if (order.status !== '待支付' || !order.orderNo) {
+        this.utils.toast({title: '订单状态已变化，请刷新后重试', type: 'warning'});
+        return;
+    }
+    this.utils.router.push(PENDING_PAYMENT_PAGE_ID, {orderId: order.orderNo});
+}
+
+export function openCancelOrderDialog() {
+    if ((this.state.order || {}).status !== '待支付') return;
+    this.setState({isCancelDialogVisible: true});
+    refreshOrderDetailJsx(this);
+    centerDialogToPageContent('.order-detail-dialog', '.order-detail-page');
+}
+
+export function closeCancelOrderDialog() {
+    if (this.state.isCancellingOrder) return;
+    this.setState({isCancelDialogVisible: false});
+    refreshOrderDetailJsx(this);
+}
+
+/** 取消当前待支付订单；库存释放仍由既有业务规则负责。 */
+export async function cancelPendingOrder() {
+    const order = this.state.order || {};
+    if (order.status !== '待支付' || !order.formInstId) {
+        this.utils.toast({title: '当前订单不可取消，请刷新后重试', type: 'warning'});
+        return;
+    }
+    this.setState({isCancellingOrder: true});
+    refreshOrderDetailJsx(this);
+    const closeTime = Date.now();
+    try {
+        await this.dataSourceMap.updateOrderOnCancel.load({
+            formInstId: order.formInstId,
+            updateFormDataJson: JSON.stringify({
+                radioField_mt2mw54h: '已关闭',
+                radioField_mt8fx6mi: '已关闭（未释放库存）',
+                dateField_mt2qewds: closeTime,
+                radioField_mt9fft19: '否'
+            })
+        });
+        this.setState({
+            remainingPaymentMilliseconds: 0, isCancelDialogVisible: false,
+            order: Object.assign({}, order, {status: '已关闭', closeStatus: '已关闭（未释放库存）', closeTime: closeTime, isTimeoutClosed: false})
+        });
+        this.utils.toast({title: '订单已取消', type: 'success'});
+    } catch (error) {
+        console.error('[订单详情] 取消订单失败', error);
+        this.utils.toast({title: error.message || '订单取消失败，请稍后重试', type: 'error'});
+    } finally {
+        this.setState({isCancellingOrder: false});
+        refreshOrderDetailJsx(this);
+    }
+}
+
+export function didUnmount() {
+    if (this.orderDetailCountdownTimer) window.clearTimeout(this.orderDetailCountdownTimer);
+    if (this.orderDetailPaymentBarResizeObserver) this.orderDetailPaymentBarResizeObserver.disconnect();
 }
 
 /** 返回订单列表。 */
