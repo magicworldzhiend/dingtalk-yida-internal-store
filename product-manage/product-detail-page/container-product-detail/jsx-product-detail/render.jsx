@@ -251,7 +251,7 @@ function render() {
             const updatedSkuRows = latestSkuRows.map((row, index) => (
                 index === latestSkuRowIndex
                     ? Object.assign({}, row, {
-                        numberField_msymrpxc: latestAvailableStock - buyNum,
+                        // 可用库存由“总库存 - 锁定库存”自动计算，不直接持久化。
                         numberField_msymrpxd: latestLockedStock + buyNum,
                     })
                     : row

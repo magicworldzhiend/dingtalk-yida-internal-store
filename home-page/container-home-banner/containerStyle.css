@@ -8,6 +8,11 @@
     background-color: #FFFFFF;
 }
 
+/* JSX 未返回可展示 Banner 时，隐藏整个 Container，避免页面出现空白轮播板块。 */
+:root:has(.home-banner-empty) {
+    display: none;
+}
+
 @media screen and (max-width: 767px) {
     :root {
         /* 与详情页主图一致：页面底色和 Banner 之间保留双层轻量留白。 */

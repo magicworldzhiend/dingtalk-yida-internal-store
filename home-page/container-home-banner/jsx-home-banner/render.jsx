@@ -6,6 +6,11 @@ function render(me, state, data, ctx) {
         ? this.state.getAvailableBanner
         : [];
 
+    // 没有可展示 Banner 时交由 Container 隐藏整个轮播板块，避免保留空白区域。
+    if (!bannerList.length) {
+        return <div class="home-banner-empty" aria-hidden="true"></div>;
+    }
+
     return (
         <div id="home-banner-swiper" class="swiper home-banner-swiper">
             <div class="swiper-wrapper">
