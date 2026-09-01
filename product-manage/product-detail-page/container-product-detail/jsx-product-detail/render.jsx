@@ -2,6 +2,7 @@
  * 渲染商品详情、规格选择及购买操作区域。
  */
 function render() {
+    const DEFAULT_HOME_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
     const pageState = this.state || {};
     const product = pageState.product || {};
     const attrList = product.attrList || [];
@@ -284,17 +285,23 @@ function render() {
         }
     };
 
-    /** 从首页进入详情页时，返回浏览器历史中的首页。 */
+    /**
+     * 返回首页记录的稳定地址，不依赖待付款页改变后的浏览器历史栈。
+     *
+     * 从首页进入时恢复原首页地址；直链或待付款页进入时使用商城首页兜底地址。
+     */
     const goBackToHome = () => {
-        if (window.history.length > 1) {
-            window.history.back();
-            return;
+        try {
+            const homeUrl = window.sessionStorage.getItem('internalStoreHomeUrl');
+            if (homeUrl) {
+                window.location.href = homeUrl;
+                return;
+            }
+        } catch (error) {
+            // sessionStorage 不可用时使用固定首页地址。
         }
 
-        this.utils.toast({
-            title: '未找到首页访问记录，请从首页重新进入商品详情。',
-            type: 'warning',
-        });
+        window.location.href = DEFAULT_HOME_URL;
     };
 
     return (

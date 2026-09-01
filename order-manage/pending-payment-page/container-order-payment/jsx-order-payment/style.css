@@ -234,6 +234,25 @@
     text-align: right;
 }
 
+.pending-payment-cancel-card {
+    display: flex;
+    justify-content: center;
+}
+
+.pending-payment-cancel-card button {
+    border: 0;
+    background: transparent;
+    color: #8f959e;
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 160ms ease, transform 160ms ease;
+}
+
+.pending-payment-cancel-card button:hover {
+    color: #e5484d;
+    transform: translateY(-1px);
+}
+
 .pending-payment-bar {
     position: fixed;
     right: 0;
@@ -293,6 +312,113 @@
     background: #4096ff;
     box-shadow: 0 6px 14px rgba(22, 119, 255, 0.24);
     transform: scale(1.03);
+}
+
+.pending-payment-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pending-payment-bar-actions .pending-payment-back-button {
+    display: inline-flex;
+    min-width: 128px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #91caff;
+    background: #fff;
+    color: #1677ff;
+    font-size: 15px;
+}
+
+.pending-payment-bar-actions .pending-payment-back-button:hover {
+    border-color: #1677ff;
+    background: #eaf4ff;
+    color: #0f66d8;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.16);
+    transform: scale(1.03);
+}
+
+.pending-payment-dialog-mask {
+    position: fixed;
+    z-index: 20;
+    inset: 0;
+    display: flex;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.42);
+    animation: pending-payment-mask-in 160ms ease;
+}
+
+.pending-payment-dialog {
+    width: min(100%, 360px);
+    padding: 24px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
+    animation: pending-payment-dialog-in 180ms ease;
+}
+
+.pending-payment-dialog h2,
+.pending-payment-dialog p {
+    margin: 0;
+}
+
+.pending-payment-dialog h2 {
+    color: #1f2937;
+    font-size: 18px;
+}
+
+.pending-payment-dialog p {
+    margin-top: 10px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.pending-payment-dialog-actions {
+    display: flex;
+    margin-top: 24px;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.pending-payment-dialog-actions button {
+    min-width: 92px;
+    min-height: 38px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pending-payment-dialog-secondary {
+    border: 1px solid #d9dee7;
+    background: #fff;
+    color: #4b5563;
+}
+
+.pending-payment-dialog-danger {
+    border: 1px solid #e5484d;
+    background: #e5484d;
+    color: #fff;
+}
+
+.pending-payment-dialog-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+@keyframes pending-payment-mask-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pending-payment-dialog-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .pending-payment-empty {
@@ -360,5 +486,14 @@
     .pending-payment-bar-content button {
         min-width: 112px;
         min-height: 40px;
+    }
+
+    .pending-payment-back-button {
+        display: none !important;
+    }
+
+    .pending-payment-dialog {
+        padding: 20px;
+        border-radius: 10px;
     }
 }

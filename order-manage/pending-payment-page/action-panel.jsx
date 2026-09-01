@@ -74,12 +74,14 @@ function buildPendingPaymentData(orderResponse, orderDetailResponse) {
             orderId: orderId,
             formInstId: orderRecord.formInstId || '',
             status: orderFormData.radioField_mt2mw54h || '',
+            closeStatus: orderFormData.radioField_mt8fx6mi || '',
             payableAmount: orderFormData.numberField_mt2mw54b,
             paymentMethod: orderFormData.radioField_mtgliziq || '',
             submitTime: orderFormData.dateField_mt6szq75,
             timeoutCloseTime: timeoutCloseTime,
         },
         orderDetail: {
+            spuId: orderDetailFormData.textField_mt9xddqu || '',
             imageUrl: resolveImageUrl(orderDetailFormData.imageField_mtglpdws),
             productName: orderDetailFormData.textField_mt9i74jg || '',
             specification: orderDetailFormData.textField_mt9i74jk || '',
@@ -240,6 +242,8 @@ async function loadRawOrderData(page, orderId) {
         orderDetail: pendingPaymentData.orderDetail,
         selectedPaymentMethod: pendingPaymentData.order.paymentMethod,
         isSubmittingPayment: false,
+        isCancelDialogVisible: false,
+        isCancellingOrder: false,
     });
     refreshPaymentCountdown(page, pendingPaymentData.order.timeoutCloseTime);
 }
@@ -261,6 +265,8 @@ export async function didMount() {
         orderDetail: null,
         selectedPaymentMethod: '',
         isSubmittingPayment: false,
+        isCancelDialogVisible: false,
+        isCancellingOrder: false,
     });
 
     // 已确认的真实画布 Container：div_mtgm8ahq。
@@ -328,6 +334,68 @@ export async function onConfirmPayment() {
         });
     } finally {
         this.setState({ isSubmittingPayment: false });
+        refreshPendingPaymentJsx(this);
+    }
+}
+
+/**
+ * 取消待支付订单。
+ *
+ * 订单关闭状态为只读字段，由既有函数回填；页面只负责关闭订单主状态。
+ */
+export async function onCancelOrder() {
+    const order = this.state.order || {};
+    const orderDetail = this.state.orderDetail || {};
+
+    if (order.status !== '待支付' || !order.formInstId) {
+        this.utils.toast({ title: '当前订单不可取消，请刷新后重试', type: 'warning' });
+        return;
+    }
+
+    const closeTime = Date.now();
+    this.setState({ isCancellingOrder: true });
+    refreshPendingPaymentJsx(this);
+
+    try {
+        await this.dataSourceMap.updateOrderOnCancel.load({
+            formInstId: order.formInstId,
+            updateFormDataJson: JSON.stringify({
+                radioField_mt2mw54h: '已关闭',
+                dateField_mt2qewds: closeTime,
+                radioField_mt9fft19: '否',
+            }),
+        });
+
+        this.setState({
+            pageStatus: 'closed',
+            remainingMilliseconds: 0,
+            isCancelDialogVisible: false,
+            order: Object.assign({}, order, {
+                status: '已关闭',
+            }),
+        });
+        refreshPendingPaymentJsx(this);
+        this.utils.toast({ title: '订单已取消', type: 'success' });
+
+        if (!orderDetail.spuId) {
+            this.utils.toast({
+                title: '订单已取消，但未获取到商品详情路由参数',
+                type: 'warning',
+            });
+            return;
+        }
+
+        window.location.href = window.location.origin
+            + '/APP_VZ5VTLROLBD0JJKKLROD/preview/FORM-CBE983ABBA9A456882844971E75A61FC1M0L?spuID='
+            + encodeURIComponent(orderDetail.spuId);
+    } catch (error) {
+        console.error('[待付款页] 取消订单失败：', error);
+        this.utils.toast({
+            title: error.message || '订单取消失败，请稍后重试',
+            type: 'error',
+        });
+    } finally {
+        this.setState({ isCancellingOrder: false });
         refreshPendingPaymentJsx(this);
     }
 }

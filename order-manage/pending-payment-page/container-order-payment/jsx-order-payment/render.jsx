@@ -49,13 +49,16 @@ function render() {
     const orderId = pageState.orderId || '';
     const pageStatus = pageState.pageStatus || 'ready-to-load';
     const isMissingOrderId = pageStatus === 'missing-order-id';
-    const isOrderLoaded = pageStatus === 'loaded' || pageStatus === 'expired';
+    const isOrderLoaded = pageStatus === 'loaded' || pageStatus === 'expired' || pageStatus === 'closed';
     const selectedPaymentMethod = pageState.selectedPaymentMethod || order.paymentMethod || '';
     const isSubmittingPayment = Boolean(pageState.isSubmittingPayment);
+    const isCancellingOrder = Boolean(pageState.isCancellingOrder);
+    const isCancelDialogVisible = Boolean(pageState.isCancelDialogVisible);
     const canPay = pageStatus === 'loaded'
         && order.status === '待支付'
         && Boolean(selectedPaymentMethod)
         && !isSubmittingPayment;
+    const canCancel = order.status === '待支付' && !isCancellingOrder;
     const imageUrl = orderDetail.imageUrl || '';
     const productName = orderDetail.productName || '订单商品加载中';
     const specification = orderDetail.specification || '--';
@@ -78,10 +81,46 @@ function render() {
     };
 
     const selectPaymentMethod = (paymentMethod) => {
-        if (isSubmittingPayment) {
+        if (isSubmittingPayment || isCancellingOrder || order.status !== '待支付') {
             return;
         }
         this.setState({ selectedPaymentMethod: paymentMethod });
+        const jsxComponent = this.$('jsx_mtgm8ahr');
+        if (jsxComponent) {
+            jsxComponent.forceUpdate();
+        }
+    };
+
+    /** 返回本订单对应的商品详情页，并保留 SPU 路由参数。 */
+    const goBackToProduct = () => {
+        if (!orderDetail.spuId) {
+            this.utils.toast({ title: '未获取到商品信息，无法返回商品详情', type: 'warning' });
+            return;
+        }
+
+        window.location.href = window.location.origin
+            + '/APP_VZ5VTLROLBD0JJKKLROD/preview/FORM-CBE983ABBA9A456882844971E75A61FC1M0L?spuID='
+            + encodeURIComponent(orderDetail.spuId);
+    };
+
+    /** 打开取消订单确认对话框。 */
+    const openCancelDialog = () => {
+        if (!canCancel) {
+            return;
+        }
+        this.setState({ isCancelDialogVisible: true });
+        const jsxComponent = this.$('jsx_mtgm8ahr');
+        if (jsxComponent) {
+            jsxComponent.forceUpdate();
+        }
+    };
+
+    /** 关闭取消订单确认对话框。 */
+    const closeCancelDialog = () => {
+        if (isCancellingOrder) {
+            return;
+        }
+        this.setState({ isCancelDialogVisible: false });
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -124,8 +163,10 @@ function render() {
     return (
         <div class="pending-payment-page">
             <header class="pending-payment-header">
-                <h1>待付款</h1>
-                <p>请在支付倒计时结束前完成支付，逾期订单将自动关闭。</p>
+                <h1>{pageStatus === 'closed' ? '订单已关闭' : '待付款'}</h1>
+                <p>{pageStatus === 'closed'
+                    ? '订单已取消，支付入口不可用。'
+                    : '请在支付倒计时结束前完成支付，逾期订单将自动关闭。'}</p>
             </header>
 
             <section class="pending-payment-card pending-payment-countdown-card">
@@ -133,6 +174,8 @@ function render() {
                 <strong class="pending-payment-countdown">{countdownText}</strong>
                 <p>{pageStatus === 'expired'
                     ? '订单已超时，等待关闭结果确认。'
+                    : pageStatus === 'closed'
+                        ? '订单已关闭，支付入口不可用。'
                     : '支付截止时间：' + formatDateTime(order.timeoutCloseTime)}</p>
             </section>
 
@@ -180,7 +223,7 @@ function render() {
                             class={selectedPaymentMethod === paymentMethod
                                 ? 'pending-payment-method-row pending-payment-method-row-active'
                                 : 'pending-payment-method-row'}
-                            disabled={isSubmittingPayment}
+                            disabled={isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
                             onClick={() => selectPaymentMethod(paymentMethod)}
                         >
                             <span class="pending-payment-method-icon" aria-hidden="true">
@@ -200,19 +243,68 @@ function render() {
                 <div><span>下单时间</span><strong>{submitTime}</strong></div>
             </section>
 
+            {canCancel ? (
+                <section class="pending-payment-card pending-payment-cancel-card">
+                    <button type="button" onClick={openCancelDialog}>不想要了</button>
+                </section>
+            ) : null}
+
+            {isCancelDialogVisible ? (
+                <div class="pending-payment-dialog-mask" role="presentation" onClick={closeCancelDialog}>
+                    <section
+                        class="pending-payment-dialog"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="pending-payment-cancel-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="pending-payment-cancel-title">是否取消订单？</h2>
+                        <p>取消后订单不可恢复，确定不再继续支付吗？</p>
+                        <div class="pending-payment-dialog-actions">
+                            <button
+                                type="button"
+                                class="pending-payment-dialog-secondary"
+                                disabled={isCancellingOrder}
+                                onClick={closeCancelDialog}
+                            >
+                                暂不取消
+                            </button>
+                            <button
+                                type="button"
+                                class="pending-payment-dialog-danger"
+                                disabled={isCancellingOrder}
+                                onClick={() => this.onCancelOrder()}
+                            >
+                                {isCancellingOrder ? '取消中...' : '确认取消'}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            ) : null}
+
             <footer class="pending-payment-bar">
                 <div class="pending-payment-bar-content">
                     <div>
                         <span>应付</span>
                         <strong>¥ {payableAmount}</strong>
                     </div>
-                    <button
-                        type="button"
-                        disabled={!canPay}
-                        onClick={() => this.onConfirmPayment()}
-                    >
-                        {isSubmittingPayment ? '保存中...' : '去支付'}
-                    </button>
+                    <div class="pending-payment-bar-actions">
+                        <button
+                            type="button"
+                            class="pending-payment-back-button"
+                            onClick={goBackToProduct}
+                        >
+                            <span aria-hidden="true">⌂</span>
+                            返回商品详情
+                        </button>
+                        <button
+                            type="button"
+                            disabled={!canPay || isCancellingOrder}
+                            onClick={() => this.onConfirmPayment()}
+                        >
+                            {isSubmittingPayment ? '保存中...' : '去支付'}
+                        </button>
+                    </div>
                 </div>
             </footer>
         </div>

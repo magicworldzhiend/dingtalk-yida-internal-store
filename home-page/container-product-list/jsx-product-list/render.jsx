@@ -267,6 +267,14 @@ function render(me, state, data, ctx) {
                             event.preventDefault();
 
                             if (product.spuId) {
+                                try {
+                                    window.sessionStorage.setItem(
+                                        'internalStoreHomeUrl',
+                                        window.location.href
+                                    );
+                                } catch (error) {
+                                    // 存储不可用时仍允许按原路由进入商品详情。
+                                }
                                 this.utils.router.push(
                                     'FORM-CBE983ABBA9A456882844971E75A61FC1M0L',
                                     { spuID: product.spuId }
