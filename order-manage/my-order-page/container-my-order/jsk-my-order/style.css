@@ -41,6 +41,7 @@
     background: transparent;
     cursor: pointer;
     font-size: 14px;
+    transition: color 160ms ease, transform 160ms ease;
 }
 
 :root .my-order-toolbar {
@@ -116,6 +117,20 @@
     color: #1677FF;
     background: transparent;
     cursor: pointer;
+    transition: background-color 160ms ease, transform 160ms ease;
+}
+
+@media (hover: hover) {
+    :root .my-order-back:hover {
+        color: #1677FF;
+        transform: translateY(-1px);
+    }
+
+    :root .my-order-search button:hover {
+        border-radius: 8px;
+        background: #F0F6FF;
+        transform: scale(1.03);
+    }
 }
 
 :root .my-order-list {
@@ -189,6 +204,7 @@
     background: transparent;
     cursor: pointer;
     text-align: left;
+    transition: color 160ms ease;
 }
 
 :root .my-order-product strong {
@@ -251,16 +267,37 @@
 }
 
 :root .my-order-actions button {
+    position: relative;
+    z-index: 1;
     min-height: 34px;
     padding: 0 12px;
     border-radius: 7px;
     cursor: pointer;
     font-size: 13px;
-    transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+    transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease,
+        color 160ms ease, box-shadow 160ms ease;
 }
 
-:root .my-order-actions button:hover {
-    transform: scale(1.03);
+@media (hover: hover) {
+    :root .my-order-product:hover strong {
+        color: #1677FF;
+    }
+
+    :root .my-order-actions button:hover {
+        z-index: 2;
+        transform: translateY(-1px);
+    }
+
+    :root .my-order-detail:hover {
+        border-color: #91CAFF;
+        color: #1677FF;
+        background: #F0F6FF;
+    }
+
+    :root .my-order-primary:hover {
+        background: #4096FF;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22);
+    }
 }
 
 :root .my-order-detail {
@@ -273,10 +310,6 @@
     border: 1px solid #1677FF;
     color: #FFFFFF;
     background: #1677FF;
-}
-
-:root .my-order-primary:hover {
-    background: #4096FF;
 }
 
 :root .my-order-empty {
