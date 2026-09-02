@@ -200,6 +200,9 @@ export function initHomeSwiper() {
                     speed: 500,
                     allowTouchMove: true,
                     simulateTouch: true,
+                    // 横向滑动仍由 Banner 轮播处理，纵向手势交还内容 Container 滚动。
+                    touchStartPreventDefault: false,
+                    touchMoveStopPropagation: false,
                     autoplay: bannerList.length > 1
                         ? {
                             delay: 5000,
@@ -613,5 +616,16 @@ export function initHomeProductLoadMore() {
 export function didUnmount() {
     if (this.homeWheelScrollHandler) {
         document.removeEventListener('wheel', this.homeWheelScrollHandler, true);
+    }
+
+    if (this.__homeProductObserver) {
+        this.__homeProductObserver.disconnect();
+    }
+
+    if (this.__homeProductListChangedHandler) {
+        window.removeEventListener(
+            'home-product-list-changed',
+            this.__homeProductListChangedHandler
+        );
     }
 }

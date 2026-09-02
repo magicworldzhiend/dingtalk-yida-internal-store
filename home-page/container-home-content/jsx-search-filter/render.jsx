@@ -52,6 +52,13 @@ function render(me, state, data, ctx) {
         pageContext.setState(value);
     }
 
+    /** 读取未触发重渲染的搜索草稿，避免 iOS 中文输入法组合字符被打断。 */
+    function getKeywordDraft() {
+        return pageContext.homeKeywordDraft === undefined
+            ? keywordInput
+            : pageContext.homeKeywordDraft;
+    }
+
     /** 在搜索或筛选条件变化后，通知商品触底观察器绑定新列表。 */
     function resetProductListObserver() {
         window.setTimeout(function () {
@@ -61,8 +68,10 @@ function render(me, state, data, ctx) {
 
     /** 提交输入框关键字，并将商品卡片可见数量重置为首批 4 条。 */
     function submitSearch() {
+        const keywordDraft = String(getKeywordDraft() || '').trim();
         updateState({
-            keyword: String(keywordInput || '').trim(),
+            keywordInput: keywordDraft,
+            keyword: keywordDraft,
             productVisibleCount: 4
         });
         resetProductListObserver();
@@ -70,6 +79,11 @@ function render(me, state, data, ctx) {
 
     /** 清空搜索、已应用类目及抽屉状态，恢复全部商品展示。 */
     function clearSearchAndResetProducts() {
+        pageContext.homeKeywordDraft = '';
+        const searchInput = document.getElementById('home-product-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+        }
         updateState({
             keywordInput: '',
             keyword: '',
@@ -308,11 +322,12 @@ function render(me, state, data, ctx) {
                 }}
             >
                 <input
-                    value={keywordInput}
+                    id="home-product-search-input"
+                    defaultValue={keywordInput}
                     placeholder="搜索商品名称"
-                    onChange={(event) => updateState({
-                        keywordInput: event.target.value
-                    })}
+                    onInput={(event) => {
+                        pageContext.homeKeywordDraft = event.target.value;
+                    }}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                             event.preventDefault();

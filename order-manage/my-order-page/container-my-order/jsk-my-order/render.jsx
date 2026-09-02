@@ -39,12 +39,27 @@ function render() {
 
     /** 提交订单号或商品名称搜索。 */
     function submitSearch() {
-        page.reloadMyOrderList({status: activeStatus, keyword: keywordInput});
+        const keywordDraft = getKeywordDraft();
+        page.reloadMyOrderList({status: activeStatus, keyword: keywordDraft});
+    }
+
+    /** 读取未触发重渲染的搜索草稿，避免 iOS 中文输入法组合字符被打断。 */
+    function getKeywordDraft() {
+        return page.myOrderKeywordDraft === undefined
+            ? keywordInput
+            : page.myOrderKeywordDraft;
+    }
+
+    /** 按 Enter 时提交当前草稿。 */
+    function submitSearchOnEnter(event) {
+        if (event.key === 'Enter') {
+            submitSearch();
+        }
     }
 
     /** 切换订单状态筛选。 */
     function selectStatus(status) {
-        page.reloadMyOrderList({status: status, keyword: keywordInput});
+        page.reloadMyOrderList({status: status, keyword: getKeywordDraft()});
     }
 
     return (
@@ -67,18 +82,22 @@ function render() {
                 </div>
                 {isMobile ? <div class="my-order-mobile-search">
                     <input
-                        value={keywordInput}
+                        defaultValue={keywordInput}
                         placeholder="搜索订单号或商品名称"
-                        onChange={(event) => page.setState({myOrderKeywordInput: event.target.value})}
-                        onKeyDown={(event) => event.key === 'Enter' && submitSearch()}
+                        onInput={(event) => {
+                            page.myOrderKeywordDraft = event.target.value;
+                        }}
+                        onKeyDown={submitSearchOnEnter}
                     />
                     <button type="button" onClick={submitSearch}>搜索</button>
                 </div> : <div class="my-order-search">
                     <input
-                        value={keywordInput}
+                        defaultValue={keywordInput}
                         placeholder="搜索订单号或商品名称"
-                        onChange={(event) => page.setState({myOrderKeywordInput: event.target.value})}
-                        onKeyDown={(event) => event.key === 'Enter' && submitSearch()}
+                        onInput={(event) => {
+                            page.myOrderKeywordDraft = event.target.value;
+                        }}
+                        onKeyDown={submitSearchOnEnter}
                     />
                     <button type="button" aria-label="搜索" onClick={submitSearch}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"

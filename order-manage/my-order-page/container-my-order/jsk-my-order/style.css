@@ -321,7 +321,6 @@
     :root .my-order-tabs {
         gap: 18px;
         padding: 0 16px;
-        border-top: 1px solid #F0F1F3;
         border-bottom: 1px solid #F0F1F3;
     }
 

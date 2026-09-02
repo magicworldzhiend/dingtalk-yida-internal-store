@@ -207,6 +207,20 @@ export async function reloadMyOrderList(options) {
 /** 触底时自动加载下一页订单。 */
 export function initMyOrderLoadMore() {
     const page = this;
+
+    /** 在确认列表仍有下一页时加载订单，供观察器与原生滚动共用。 */
+    const loadMoreBySentinel = (sentinel) => {
+        if (!sentinel || sentinel.dataset.hasMore !== 'true' || page.__myOrderLoading) {
+            return;
+        }
+
+        if (page.__myOrderObserver) {
+            page.__myOrderObserver.disconnect();
+        }
+        page.__myOrderLoadMoreTriggered = false;
+        page.loadNextMyOrderPage();
+    };
+
     const observe = () => {
         const sentinel = document.getElementById('my-order-load-more');
         if (!sentinel) {
@@ -216,9 +230,8 @@ export function initMyOrderLoadMore() {
         if (page.__myOrderObserver) {
             page.__myOrderObserver.disconnect();
         }
-        const orderList = document.querySelector('.my-order-list');
         const contentScrollElement = findMyOrderContentScrollElement();
-        if (!orderList || !contentScrollElement) {
+        if (!contentScrollElement) {
             return;
         }
         if (page.__myOrderScrollElement !== contentScrollElement) {
@@ -230,20 +243,36 @@ export function initMyOrderLoadMore() {
                 if (contentScrollElement.scrollTop > 0) {
                     page.__myOrderLoadMoreTriggered = true;
                 }
+
+                if (page.__myOrderScrollTicking) {
+                    return;
+                }
+
+                page.__myOrderScrollTicking = true;
+                window.requestAnimationFrame(() => {
+                    page.__myOrderScrollTicking = false;
+
+                    const remainingScrollHeight = contentScrollElement.scrollHeight
+                        - contentScrollElement.scrollTop
+                        - contentScrollElement.clientHeight;
+
+                    if (remainingScrollHeight <= 240) {
+                        loadMoreBySentinel(document.getElementById('my-order-load-more'));
+                    }
+                });
             };
             contentScrollElement.addEventListener('scroll', page.__myOrderScrollHandler, {passive: true});
         }
         page.__myOrderObserver = new IntersectionObserver((entries) => {
-            if (!entries[0] || !entries[0].isIntersecting || entries[0].target.dataset.hasMore !== 'true' || page.__myOrderLoading || !page.__myOrderLoadMoreTriggered) {
+            if (!entries[0] || !entries[0].isIntersecting || !page.__myOrderLoadMoreTriggered) {
                 return;
             }
-            page.__myOrderObserver.disconnect();
-            page.__myOrderLoadMoreTriggered = false;
-            page.loadNextMyOrderPage();
+            loadMoreBySentinel(entries[0].target);
         }, {root: contentScrollElement, rootMargin: '0px 0px 240px 0px', threshold: 0});
         page.__myOrderObserver.observe(sentinel);
     };
-    window.addEventListener('my-order-list-changed', observe);
+    page.__myOrderListChangedHandler = observe;
+    window.addEventListener('my-order-list-changed', page.__myOrderListChangedHandler);
     observe();
 }
 
@@ -337,5 +366,11 @@ export function didUnmount() {
     }
     if (this.__myOrderScrollElement && this.__myOrderScrollHandler) {
         this.__myOrderScrollElement.removeEventListener('scroll', this.__myOrderScrollHandler);
+    }
+    if (this.__myOrderObserver) {
+        this.__myOrderObserver.disconnect();
+    }
+    if (this.__myOrderListChangedHandler) {
+        window.removeEventListener('my-order-list-changed', this.__myOrderListChangedHandler);
     }
 }
