@@ -391,7 +391,7 @@ export async function onCancelOrder() {
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
                 radioField_mt2mw54h: '已关闭',
-                radioField_mt8fx6mi: '已关闭（未释放库存）',
+                radioField_mt8fx6mi: '关闭（未释放库存）',
                 dateField_mt2qewds: closeTime,
                 radioField_mt9fft19: '否',
             }),
@@ -403,7 +403,7 @@ export async function onCancelOrder() {
             isCancelDialogVisible: false,
             order: Object.assign({}, order, {
                 status: '已关闭',
-                closeStatus: '已关闭（未释放库存）',
+                closeStatus: '关闭（未释放库存）',
             }),
         });
         refreshPendingPaymentJsx(this);

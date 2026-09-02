@@ -188,6 +188,15 @@ export function initProductDetailPurchaseBarAlignment() {
         purchaseBar.style.removeProperty('width');
     }
 
+    /**
+     * 在首次定位完成后显示购买栏，避免先以视口全宽绘制、再收缩到内容区。
+     *
+     * @param {HTMLElement} purchaseBar 商品详情购买栏元素
+     */
+    function revealPurchaseBar(purchaseBar) {
+        purchaseBar.setAttribute('data-aligned', 'true');
+    }
+
     function updatePurchaseBarPosition() {
         animationFrameId = null;
 
@@ -201,6 +210,7 @@ export function initProductDetailPurchaseBarAlignment() {
         // 移动端沿用 CSS 的全宽底栏，避免安全区和窄屏布局受桌面端定位影响。
         if (window.matchMedia('(max-width: 767px)').matches) {
             clearPurchaseBarPosition(purchaseBar);
+            revealPurchaseBar(purchaseBar);
             return;
         }
 
@@ -213,6 +223,7 @@ export function initProductDetailPurchaseBarAlignment() {
         purchaseBar.style.left = pageRect.left + 'px';
         purchaseBar.style.right = 'auto';
         purchaseBar.style.width = pageRect.width + 'px';
+        revealPurchaseBar(purchaseBar);
     }
 
     function schedulePurchaseBarPosition() {
@@ -251,6 +262,39 @@ export function initProductDetailPurchaseBarAlignment() {
     }
 
     bindPurchaseBarPosition();
+}
+
+/**
+ * 按可售 SKU 初始化规格选择，保证进入详情页时优先展示可购买的规格组合。
+ *
+ * @param {Array} attrList 商品属性列表
+ * @param {Array} attrValueList SKU 明细列表
+ * @returns {Object} 初始选中的属性值映射
+ */
+function buildInitialSelectedMap(attrList, attrValueList) {
+    const fallbackSku = attrValueList[0] || {};
+    const availableSku = attrValueList.find((sku) => (
+        Number(sku.availableStock || 0) > 0
+    ));
+    const initialSku = availableSku || fallbackSku;
+    const skuValueList = String(initialSku.attrText || '')
+        .split(' / ')
+        .map((value) => value.trim());
+    const selectedMap = {};
+
+    attrList.forEach((attrItem, index) => {
+        const attrName = attrItem.attr || '';
+        const valueList = attrItem.value || [];
+        const skuValue = skuValueList[index];
+
+        if (attrName && valueList.indexOf(skuValue) !== -1) {
+            selectedMap[attrName] = skuValue;
+        } else if (attrName && valueList.length > 0) {
+            selectedMap[attrName] = valueList[0];
+        }
+    });
+
+    return selectedMap;
 }
 
 /**
@@ -367,18 +411,11 @@ export async function didMount() {
     }
 
 
-    const selectedMap = {};
     const attrList = product.attrList || [];
-    for (let i = 0; i < attrList.length; i++) {
-        const attrItem = attrList[i];
-        const attrName = attrItem.attr;
-        const valueList = attrItem.value || [];
-        if (attrName && valueList.length > 0) {
-            selectedMap[attrName] = valueList[0];
-        }
-    }
-
-    product.selectedMap = selectedMap;
+    product.selectedMap = buildInitialSelectedMap(
+        attrList,
+        product.attrValueList || []
+    );
     this.setState(
         {
             product: product

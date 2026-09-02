@@ -241,14 +241,14 @@ export async function cancelPendingOrder() {
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
                 radioField_mt2mw54h: '已关闭',
-                radioField_mt8fx6mi: '已关闭（未释放库存）',
+                radioField_mt8fx6mi: '关闭（未释放库存）',
                 dateField_mt2qewds: closeTime,
                 radioField_mt9fft19: '否'
             })
         });
         this.setState({
             remainingPaymentMilliseconds: 0, isCancelDialogVisible: false,
-            order: Object.assign({}, order, {status: '已关闭', closeStatus: '已关闭（未释放库存）', closeTime: closeTime, isTimeoutClosed: false})
+            order: Object.assign({}, order, {status: '已关闭', closeStatus: '关闭（未释放库存）', closeTime: closeTime, isTimeoutClosed: false})
         });
         this.utils.toast({title: '订单已取消', type: 'success'});
     } catch (error) {
