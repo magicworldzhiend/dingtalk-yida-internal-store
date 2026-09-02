@@ -1,0 +1,52 @@
+:root .home-global-navigation {
+    display: flex;
+    box-sizing: border-box;
+    height: 60px;
+    width: 100%;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+}
+
+:root .home-global-navigation button {
+    position: relative;
+    height: auto;
+    padding: 0 14px;
+    border: 0;
+    color: #646A73;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 160ms ease;
+}
+
+:root .home-global-navigation button:hover,
+:root .home-global-navigation-active {
+    color: #1677FF !important;
+}
+
+:root .home-global-navigation-active::after {
+    position: absolute;
+    right: 14px;
+    bottom: 4px;
+    left: 14px;
+    height: 2px;
+    background: #1677FF;
+    content: '';
+}
+
+:root .home-global-navigation-badge {
+    position: absolute;
+    top: 8px;
+    right: 3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border: 1px solid #FFFFFF;
+    border-radius: 9px;
+    background: #E5484D;
+    color: #FFFFFF;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+}

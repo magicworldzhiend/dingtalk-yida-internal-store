@@ -5,6 +5,7 @@ function render() {
     const order = state.order || {};
     const goodsList = Array.isArray(state.goodsList) ? state.goodsList : [];
     const pageStatus = state.orderDetailPageStatus || 'loading';
+    const isMobile = page.utils.isMobile();
 
     /** 统一金额展示，避免浮点计算结果直接暴露给用户。 */
     function formatAmount(value) {
@@ -81,17 +82,13 @@ function render() {
     const timeline = getTimeline();
     return (
         <div class="order-detail-page">
-            <header class="order-detail-header">
-                <button type="button" class="order-detail-back-button" onClick={() => page.backToOrderList()}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                         strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M15 18l-6-6 6-6"></path>
-                    </svg>
-                    <span>返回订单列表</span></button>
-                <div class="order-detail-header-title"><h1>订单详情</h1><span
-                    class={getStatusClass(order.status)}>{order.status || '--'}</span></div>
-                <span class="order-detail-header-space" aria-hidden="true"></span>
-            </header>
+            {!isMobile && <div class="order-detail-global-layout"><nav class="order-detail-breadcrumb" aria-label="页面层级">
+                <button type="button" onClick={() => page.goToHome()}>首页</button>
+                <span aria-hidden="true">/</span>
+                <button type="button" onClick={() => page.backToOrderList()}>我的订单</button>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">订单详情</span>
+            </nav></div>}
             <section class="order-detail-card order-detail-timeline-card">
                 <div class="order-detail-section-heading"><h2>订单状态</h2></div>
                 <div

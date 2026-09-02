@@ -2,6 +2,7 @@ const ORDER_FORM_UUID = 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL';
 const ORDER_DETAIL_FORM_UUID = 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN';
 const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
 const ORDER_DETAIL_PAGE_ID = 'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8';
+const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const MY_ORDER_JSX_ID = 'jsx_mti8yqbo';
 const ORDER_PAGE_SIZE = 10;
 const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
@@ -123,42 +124,43 @@ export async function didMount() {
         myOrderLoading: true,
         myOrderLoadFailed: false
     });
+    initMyOrderWheelScroll.call(this);
     this.initMyOrderLoadMore();
-    this.initMyOrderPullToRefresh();
     await this.reloadMyOrderList({status: '', keyword: ''});
 }
 
-/** 初始化移动端订单列表下拉刷新。 */
-export function initMyOrderPullToRefresh() {
+/** 将订单页任意位置的桌面端滚轮统一转交给订单列表。 */
+export function initMyOrderWheelScroll() {
     const page = this;
-    if (!page.utils.isMobile()) {
-        return;
-    }
-    let retryCount = 0;
-    let startY = 0;
 
-    function bindPullToRefresh() {
-        const orderList = document.querySelector('.my-order-list');
-        if (!orderList) {
-            if (retryCount < 20) {
-                retryCount += 1;
-                window.setTimeout(bindPullToRefresh, 100);
-            }
+    page.myOrderWheelScrollHandler = (event) => {
+        const contentScrollElement = findMyOrderContentScrollElement();
+
+        if (!contentScrollElement || window.matchMedia('(max-width: 767px)').matches) {
             return;
         }
-        orderList.addEventListener('touchstart', (event) => {
-            startY = orderList.scrollTop <= 0 && event.touches[0] ? event.touches[0].clientY : 0;
-        }, {passive: true});
-        orderList.addEventListener('touchend', (event) => {
-            const endY = event.changedTouches[0] ? event.changedTouches[0].clientY : 0;
-            if (startY && endY - startY >= 64) {
-                page.refreshMyOrderList();
-            }
-            startY = 0;
-        }, {passive: true});
+
+        event.preventDefault();
+        contentScrollElement.scrollTop += event.deltaY;
+        contentScrollElement.scrollLeft += event.deltaX;
+    };
+    document.addEventListener('wheel', page.myOrderWheelScrollHandler, {capture: true, passive: false});
+}
+
+/** 查找订单内容 JSX 所属的实际滚动 Container。 */
+function findMyOrderContentScrollElement() {
+    let element = document.querySelector('.my-order-page');
+
+    while (element && element !== document.body) {
+        const overflowY = window.getComputedStyle(element).overflowY;
+
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+            return element;
+        }
+        element = element.parentElement;
     }
 
-    bindPullToRefresh();
+    return null;
 }
 
 /** 刷新当前筛选条件下的订单列表。 */
@@ -215,13 +217,30 @@ export function initMyOrderLoadMore() {
             page.__myOrderObserver.disconnect();
         }
         const orderList = document.querySelector('.my-order-list');
+        const contentScrollElement = findMyOrderContentScrollElement();
+        if (!orderList || !contentScrollElement) {
+            return;
+        }
+        if (page.__myOrderScrollElement !== contentScrollElement) {
+            if (page.__myOrderScrollElement && page.__myOrderScrollHandler) {
+                page.__myOrderScrollElement.removeEventListener('scroll', page.__myOrderScrollHandler);
+            }
+            page.__myOrderScrollElement = contentScrollElement;
+            page.__myOrderScrollHandler = () => {
+                if (contentScrollElement.scrollTop > 0) {
+                    page.__myOrderLoadMoreTriggered = true;
+                }
+            };
+            contentScrollElement.addEventListener('scroll', page.__myOrderScrollHandler, {passive: true});
+        }
         page.__myOrderObserver = new IntersectionObserver((entries) => {
-            if (!entries[0] || !entries[0].isIntersecting || entries[0].target.dataset.hasMore !== 'true' || page.__myOrderLoading) {
+            if (!entries[0] || !entries[0].isIntersecting || entries[0].target.dataset.hasMore !== 'true' || page.__myOrderLoading || !page.__myOrderLoadMoreTriggered) {
                 return;
             }
             page.__myOrderObserver.disconnect();
+            page.__myOrderLoadMoreTriggered = false;
             page.loadNextMyOrderPage();
-        }, {root: orderList, rootMargin: '0px 0px 240px 0px', threshold: 0});
+        }, {root: contentScrollElement, rootMargin: '0px 0px 240px 0px', threshold: 0});
         page.__myOrderObserver.observe(sentinel);
     };
     window.addEventListener('my-order-list-changed', observe);
@@ -308,5 +327,15 @@ export function backToHome() {
         }
     } catch (error) {
     }
-    window.history.back();
+    window.location.href = HOME_PAGE_URL;
+}
+
+/** 释放订单页滚轮监听。 */
+export function didUnmount() {
+    if (this.myOrderWheelScrollHandler) {
+        document.removeEventListener('wheel', this.myOrderWheelScrollHandler, true);
+    }
+    if (this.__myOrderScrollElement && this.__myOrderScrollHandler) {
+        this.__myOrderScrollElement.removeEventListener('scroll', this.__myOrderScrollHandler);
+    }
 }

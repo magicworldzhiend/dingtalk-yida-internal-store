@@ -1,5 +1,10 @@
-:root {
+:root .home-product-list-section {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 4px auto 0;
     overflow: visible;
+    border-radius: 12px;
+    background-color: #FFFFFF;
 }
 
 :root .home-product-card {

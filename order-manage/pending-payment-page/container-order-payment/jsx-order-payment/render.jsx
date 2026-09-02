@@ -46,6 +46,7 @@ function render() {
     };
 
     const pageState = this.state || {};
+    const isMobile = this.utils.isMobile();
     const order = pageState.order || {};
     const orderDetail = pageState.orderDetail || {};
     const orderId = pageState.orderId || '';
@@ -72,6 +73,31 @@ function render() {
         : '--:--:--';
     const submitTime = formatDateTime(order.submitTime);
     const orderRemark = String(pageState.orderRemark || '');
+
+    /** 打开商城首页。 */
+    const goToHome = () => {
+        this.goToHome();
+    };
+
+    /** 打开当前用户的订单列表。 */
+    const goToMyOrders = () => {
+        this.goToMyOrders();
+    };
+
+    /** 打开当前订单详情。 */
+    const goToOrderDetail = () => {
+        const currentOrderId = order.orderId || orderId;
+
+        if (!currentOrderId) {
+            this.utils.toast({ title: '未获取到订单编号，暂时无法打开订单详情', type: 'warning' });
+            return;
+        }
+
+        this.utils.router.push(
+            'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8',
+            { orderNo: currentOrderId }
+        );
+    };
 
     const getPaymentMethodIcon = (paymentMethod) => {
         if (paymentMethod === '支付宝') {
@@ -166,6 +192,13 @@ function render() {
 
     return (
         <div class="pending-payment-page">
+            {!isMobile && <div class="pending-payment-global-layout"><nav class="pending-payment-breadcrumb" aria-label="页面层级">
+                    <button type="button" onClick={goToHome}>首页</button>
+                    <span aria-hidden="true">/</span>
+                    <button type="button" onClick={goToMyOrders}>我的订单</button>
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page">订单支付</span>
+            </nav></div>}
             <header class="pending-payment-header">
                 <h1>{pageStatus === 'closed' ? '订单已关闭' : '待付款'}</h1>
                 <p>{pageStatus === 'closed'
@@ -195,7 +228,13 @@ function render() {
                     <div class="pending-payment-image-placeholder">商品图</div>
                 )}
                 <div class="pending-payment-product-content">
-                    <h2>{productName}</h2>
+                    <button
+                        type="button"
+                        class="pending-payment-product-link"
+                        onClick={goBackToProduct}
+                    >
+                        {productName}
+                    </button>
                     <p>{specification}</p>
                     <div class="pending-payment-product-detail">
                         <span>¥ {unitPrice} × {quantity || '--'}</span>
@@ -314,11 +353,10 @@ function render() {
                     <div class="pending-payment-bar-actions">
                         <button
                             type="button"
-                            class="pending-payment-back-button"
-                            onClick={goBackToProduct}
+                            class="pending-payment-order-detail-button"
+                            onClick={goToOrderDetail}
                         >
-                            <span aria-hidden="true">⌂</span>
-                            返回商品详情
+                            订单详情
                         </button>
                         <button
                             type="button"

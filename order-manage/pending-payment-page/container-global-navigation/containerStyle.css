@@ -1,0 +1,17 @@
+:root {
+    box-sizing: border-box;
+    width: calc(100% - 24px);
+    max-width: 1200px;
+    height: 60px;
+    min-height: 60px;
+    margin: 0 auto;
+    overflow: visible;
+    border-radius: 12px;
+    background: #FFFFFF;
+}
+
+@media screen and (max-width: 767px) {
+    :root {
+        display: none;
+    }
+}

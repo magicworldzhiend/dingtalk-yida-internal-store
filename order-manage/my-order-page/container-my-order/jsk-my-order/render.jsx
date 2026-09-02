@@ -50,20 +50,6 @@ function render() {
     return (
         <div class={isMobile ? 'my-order-page my-order-page-mobile' : 'my-order-page'}>
             <div class="my-order-fixed-header">
-            {!isMobile && (
-                <header class="my-order-header">
-                    <button type="button" class="my-order-back" onClick={() => page.backToHome()}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M15 18l-6-6 6-6"></path>
-                        </svg>
-                        <span>返回首页</span>
-                    </button>
-                    <h1>我的订单</h1>
-                    <div class="my-order-header-space"></div>
-                </header>
-            )}
-
             <section class="my-order-toolbar">
                 <div class="my-order-tabs" role="tablist" aria-label="订单状态">
                     {statusList.map((status) => (

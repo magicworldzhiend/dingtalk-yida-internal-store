@@ -2,8 +2,8 @@
  * 渲染商品详情、规格选择及购买操作区域。
  */
 function render() {
-    const DEFAULT_HOME_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
     const pageState = this.state || {};
+    const isMobile = this.utils.isMobile();
     const product = pageState.product || {};
     const attrList = product.attrList || [];
     const attrValueList = product.attrValueList || [];
@@ -301,21 +301,21 @@ function render() {
      * 从首页进入时恢复原首页地址；直链或待付款页进入时使用商城首页兜底地址。
      */
     const goBackToHome = () => {
-        try {
-            const homeUrl = window.sessionStorage.getItem('internalStoreHomeUrl');
-            if (homeUrl) {
-                window.location.href = homeUrl;
-                return;
-            }
-        } catch (error) {
-            // sessionStorage 不可用时使用固定首页地址。
-        }
+        this.goToHome();
+    };
 
-        window.location.href = DEFAULT_HOME_URL;
+    /** 打开当前登录用户的订单列表。 */
+    const goToMyOrders = () => {
+        this.goToMyOrders();
     };
 
     return (
         <div class="product-detail-page">
+            {!isMobile && <div class="product-detail-global-layout"><nav class="product-detail-breadcrumb" aria-label="页面层级">
+                <button type="button" onClick={goBackToHome}>首页</button>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">商品详情</span>
+            </nav></div>}
             <section class="product-detail-gallery">
                 {productImageList.length ? (
                     <div id="product-detail-swiper" class="swiper product-detail-swiper">
@@ -440,14 +440,6 @@ function render() {
                         <strong>合计 ¥ {totalPrice}</strong>
                     </div>
                     <div class="product-detail-purchase-actions">
-                        <button
-                            class="product-detail-home-button"
-                            type="button"
-                            onClick={goBackToHome}
-                        >
-                            <span class="product-detail-home-icon" aria-hidden="true">⌂</span>
-                            返回首页
-                        </button>
                         <button
                             class="product-detail-buy-button"
                             disabled={isOutOfStock || isOffShelf || isCreatingOrder}

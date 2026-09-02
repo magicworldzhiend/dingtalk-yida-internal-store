@@ -1,5 +1,7 @@
 const YIDA_OSS_PREFIX = "https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD";
 const DEFAULT_DEBUG_SPU_ID = "520260824163552";
+const DEFAULT_HOME_URL = "https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench";
+const MY_ORDER_PAGE_ID = "FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK";
 // const getGoodsImageUrl = (picStr) => {
 //   if (!picStr) return "";
 //   try {
@@ -264,6 +266,59 @@ export function initProductDetailPurchaseBarAlignment() {
     bindPurchaseBarPosition();
 }
 
+/** 获取商品详情实际内容 Container 的滚动根。 */
+function findProductDetailContentScrollElement() {
+    let element = document.querySelector('.product-detail-page');
+    while (element && element !== document.body) {
+        const overflowY = window.getComputedStyle(element).overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+            return element;
+        }
+        element = element.parentElement;
+    }
+    return null;
+}
+
+/** 将 PC 端任意位置的滚轮事件统一转交给商品详情内容区。 */
+export function initProductDetailWheelScroll() {
+    const page = this;
+    page.productDetailWheelScrollHandler = (event) => {
+        if (window.matchMedia('(max-width: 767px)').matches) return;
+        const content = findProductDetailContentScrollElement();
+        if (!content) return;
+        event.preventDefault();
+        content.scrollBy({top: event.deltaY, left: event.deltaX, behavior: 'auto'});
+    };
+    document.addEventListener('wheel', page.productDetailWheelScrollHandler, {capture: true, passive: false});
+}
+
+/** 根据当前悬停 SKU 图的位置更新固定放大图坐标，避免被内容滚动区裁切。 */
+export function initProductDetailImagePopover() {
+    const page = this;
+    page.productDetailImagePopoverMoveHandler = (event) => {
+        if (window.matchMedia('(max-width: 767px)').matches) return;
+        const target = event.target;
+        const imageContainer = target && target.closest && target.closest('.product-detail-spec-image');
+        const popover = imageContainer && imageContainer.querySelector('.product-detail-spec-image-popover');
+        if (!popover) return;
+        const imageRect = imageContainer.getBoundingClientRect();
+        const popoverWidth = Math.min(510, window.innerWidth * 0.38);
+        const pagePadding = 16;
+        let left = imageRect.right + pagePadding;
+        if (left + popoverWidth > window.innerWidth - pagePadding) {
+            left = imageRect.left - popoverWidth - pagePadding;
+        }
+        left = Math.max(pagePadding, left);
+        const top = Math.max(
+            pagePadding,
+            Math.min(imageRect.bottom - popoverWidth, window.innerHeight - popoverWidth - pagePadding)
+        );
+        popover.style.setProperty('--product-detail-popover-left', Math.round(left) + 'px');
+        popover.style.setProperty('--product-detail-popover-top', Math.round(top) + 'px');
+    };
+    document.addEventListener('pointermove', page.productDetailImagePopoverMoveHandler, true);
+}
+
 /**
  * 按可售 SKU 初始化规格选择，保证进入详情页时优先展示可购买的规格组合。
  *
@@ -393,6 +448,7 @@ export function initProductDetailSwiper() {
 
 
 export async function didMount() {
+    initProductDetailWheelScroll.call(this);
 
     // 正常从首页路由读取 SPU_ID；直接调试详情页时回退到固定测试商品。
     const spuID = this.utils.getUrlParams().spuID || DEFAULT_DEBUG_SPU_ID;
@@ -425,7 +481,38 @@ export async function didMount() {
 
     initProductDetailSwiper.call(this);
     initProductDetailPurchaseBarAlignment.call(this);
+    initProductDetailImagePopover.call(this);
 
+}
+
+/** 卸载商品详情页时释放页面级监听。 */
+export function didUnmount() {
+    if (this.productDetailPurchaseBarResizeObserver) this.productDetailPurchaseBarResizeObserver.disconnect();
+    if (this.productDetailWheelScrollHandler) {
+        document.removeEventListener('wheel', this.productDetailWheelScrollHandler, true);
+    }
+    if (this.productDetailImagePopoverMoveHandler) {
+        document.removeEventListener('pointermove', this.productDetailImagePopoverMoveHandler, true);
+    }
+}
+
+/** 返回首页记录的稳定地址。 */
+export function goToHome() {
+    try {
+        const homeUrl = window.sessionStorage.getItem('internalStoreHomeUrl');
+        if (homeUrl) {
+            window.location.href = homeUrl;
+            return;
+        }
+    } catch (error) {
+        // sessionStorage 不可用时使用固定首页地址。
+    }
+    window.location.href = DEFAULT_HOME_URL;
+}
+
+/** 打开当前登录用户的订单列表。 */
+export function goToMyOrders() {
+    this.utils.router.push(MY_ORDER_PAGE_ID);
 }
 
 /**

@@ -2,6 +2,7 @@ const ORDER_FORM_UUID = 'FORM-F7AEAE3939C14A4696786991D78FB19E85EL';
 const ORDER_DETAIL_FORM_UUID = 'FORM-FD12EFCA83254FFD977BCFADCFC85533PDEN';
 const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
 const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
+const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const ORDER_DETAIL_JSX_ID = 'jsx_mt0wteuu';
 
 /** 将宜搭图片字段转换为可展示的图片地址。 */
@@ -32,6 +33,32 @@ function refreshOrderDetailJsx(page) {
     if (component) {
         component.forceUpdate();
     }
+}
+
+/** 获取订单详情实际内容 Container 的滚动根。 */
+function findOrderDetailContentScrollElement() {
+    let element = document.querySelector('.order-detail-page');
+    while (element && element !== document.body) {
+        const overflowY = window.getComputedStyle(element).overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+            return element;
+        }
+        element = element.parentElement;
+    }
+    return null;
+}
+
+/** 将 PC 端任意位置的滚轮事件统一转交给订单详情内容区。 */
+export function initOrderDetailWheelScroll() {
+    const page = this;
+    page.orderDetailWheelScrollHandler = (event) => {
+        if (window.matchMedia('(max-width: 767px)').matches) return;
+        const content = findOrderDetailContentScrollElement();
+        if (!content) return;
+        event.preventDefault();
+        content.scrollBy({top: event.deltaY, left: event.deltaX, behavior: 'auto'});
+    };
+    document.addEventListener('wheel', page.orderDetailWheelScrollHandler, {capture: true, passive: false});
 }
 
 /** 将对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
@@ -170,6 +197,7 @@ async function loadDepartment(page) {
 
 /** 加载订单详情页数据。 */
 export async function didMount() {
+    initOrderDetailWheelScroll.call(this);
     const orderNo = this.utils.getUrlParams().orderNo;
     if (!orderNo) {
         this.setState({orderDetailPageStatus: 'missing-order-no'});
@@ -263,11 +291,19 @@ export async function cancelPendingOrder() {
 export function didUnmount() {
     if (this.orderDetailCountdownTimer) window.clearTimeout(this.orderDetailCountdownTimer);
     if (this.orderDetailPaymentBarResizeObserver) this.orderDetailPaymentBarResizeObserver.disconnect();
+    if (this.orderDetailWheelScrollHandler) {
+        document.removeEventListener('wheel', this.orderDetailWheelScrollHandler, true);
+    }
 }
 
 /** 返回订单列表。 */
 export function backToOrderList() {
     this.utils.router.replace(MY_ORDER_PAGE_ID);
+}
+
+/** 打开商城首页。 */
+export function goToHome() {
+    window.location.href = HOME_PAGE_URL;
 }
 
 /** 打开订单商品对应的商品详情页。 */

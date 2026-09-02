@@ -290,6 +290,7 @@ function render(me, state, data, ctx) {
 
     return (
         <div
+            class="home-search-filter-section"
             style={{
                 position: 'relative',
                 display: 'flex',
@@ -458,7 +459,7 @@ function render(me, state, data, ctx) {
                 onClick={() => openMyOrders()}
                 style={{
                     flex: '0 0 auto',
-                    display: 'flex',
+                    display: isMobile ? 'flex' : 'none',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',

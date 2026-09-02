@@ -13,9 +13,49 @@
  * 三个初始化必须同时保留，避免其中一项功能在覆盖页面 JS 时失效。
  */
 export function didMount() {
+    initHomeWheelScroll.call(this);
     initHomeSwiper.call(this);
     initHomeProductLoadMore.call(this);
     loadPendingPaymentOrderCount.call(this);
+}
+
+/** 将首页任意位置的鼠标滚轮统一转交给内容滚动 Container。 */
+export function initHomeWheelScroll() {
+    const page = this;
+
+    page.homeWheelScrollHandler = (event) => {
+        const contentScrollElement = findHomeContentScrollElement(
+            document.querySelector('.home-banner-section')
+        );
+
+        if (!contentScrollElement || window.matchMedia('(max-width: 767px)').matches) {
+            return;
+        }
+
+        event.preventDefault();
+        contentScrollElement.scrollBy({
+            top: event.deltaY,
+            left: event.deltaX,
+            behavior: 'auto'
+        });
+    };
+    document.addEventListener('wheel', page.homeWheelScrollHandler, {capture: true, passive: false});
+}
+
+/** 查找包含指定节点的首页内容滚动容器。 */
+function findHomeContentScrollElement(element) {
+    let currentElement = element && element.nodeType === 1 ? element : null;
+
+    while (currentElement && currentElement !== document.body) {
+        const overflowY = window.getComputedStyle(currentElement).overflowY;
+
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+            return currentElement;
+        }
+        currentElement = currentElement.parentElement;
+    }
+
+    return null;
 }
 
 /**
@@ -54,6 +94,7 @@ export function loadPendingPaymentOrderCount() {
         page.setState({ pendingPaymentOrderCount: 0 });
     });
 }
+
 
 
 /**
@@ -502,6 +543,9 @@ export function initHomeProductLoadMore() {
             page.__homeProductObserver.disconnect();
         }
 
+        const contentScrollElement = findHomeContentScrollElement(
+            document.querySelector('.home-banner-section')
+        );
         page.__homeProductObserver = new IntersectionObserver(
             (entries) => {
                 const entry = entries[0];
@@ -533,7 +577,7 @@ export function initHomeProductLoadMore() {
                 });
             },
             {
-                root: null,
+                root: contentScrollElement,
                 rootMargin: '0px 0px 240px 0px',
                 threshold: 0
             }
@@ -563,4 +607,11 @@ export function initHomeProductLoadMore() {
             console.error('首页商品初始加载失败', error);
         })
         .then(() => observeLoadMore());
+}
+
+/** 释放首页页面级滚轮监听。 */
+export function didUnmount() {
+    if (this.homeWheelScrollHandler) {
+        document.removeEventListener('wheel', this.homeWheelScrollHandler, true);
+    }
 }

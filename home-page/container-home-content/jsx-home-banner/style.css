@@ -1,3 +1,16 @@
+:root .home-banner-section {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0 auto 0;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: #FFFFFF;
+}
+
+:root .home-banner-section:has(.home-banner-empty) {
+    display: none;
+}
+
 :root .home-banner-swiper {
     width: 100%;
     aspect-ratio: 3 / 1;
@@ -39,6 +52,12 @@
 }
 
 @media screen and (max-width: 767px) {
+    :root .home-banner-section {
+        width: 100%;
+        margin-top: 4px;
+        border-radius: 8px;
+    }
+
     :root .home-banner-swiper {
         aspect-ratio: 3 / 2;
         border-radius: 8px;

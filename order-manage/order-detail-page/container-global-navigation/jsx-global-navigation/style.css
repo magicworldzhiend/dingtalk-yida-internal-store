@@ -1,0 +1,35 @@
+:root .order-detail-global-navigation {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    height: 60px;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+}
+
+:root .order-detail-global-navigation button {
+    position: relative;
+    padding: 0 14px;
+    border: 0;
+    color: #646A73;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 160ms ease;
+}
+
+:root .order-detail-global-navigation button:hover,
+:root .order-detail-global-navigation-active {
+    color: #1677FF !important;
+}
+
+:root .order-detail-global-navigation-active::after {
+    position: absolute;
+    right: 14px;
+    bottom: 6px;
+    left: 14px;
+    height: 2px;
+    background: #1677FF;
+    content: '';
+}

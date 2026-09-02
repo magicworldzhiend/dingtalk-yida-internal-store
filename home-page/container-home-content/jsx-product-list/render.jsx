@@ -229,7 +229,7 @@ function render(me, state, data, ctx) {
 
     if (!productList.length) {
         return (
-            <div>
+            <div class="home-product-list-section">
                 <div
                     style={{
                         padding: isMobile ? '48px 12px' : '64px 24px',
@@ -254,7 +254,7 @@ function render(me, state, data, ctx) {
     }
 
     return (
-        <div style={{ width: '100%' }}>
+        <div class="home-product-list-section">
             <div
                 style={{
                     display: 'grid',

@@ -1,5 +1,7 @@
 const DEFAULT_DEBUG_ORDER_ID = '17920260831135120';
 const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
+const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
+const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
 
 /**
  * 从当前页面地址读取订单业务主键。
@@ -129,6 +131,32 @@ function refreshPendingPaymentJsx(page) {
     if (jsxComponent) {
         jsxComponent.forceUpdate();
     }
+}
+
+/** 获取待支付页实际内容 Container 的滚动根。 */
+function findPendingPaymentContentScrollElement() {
+    let element = document.querySelector('.pending-payment-page');
+    while (element && element !== document.body) {
+        const overflowY = window.getComputedStyle(element).overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+            return element;
+        }
+        element = element.parentElement;
+    }
+    return null;
+}
+
+/** 将 PC 端任意位置的滚轮事件统一转交给待支付内容区。 */
+export function initPendingPaymentWheelScroll() {
+    const page = this;
+    page.pendingPaymentWheelScrollHandler = (event) => {
+        if (window.matchMedia('(max-width: 767px)').matches) return;
+        const content = findPendingPaymentContentScrollElement();
+        if (!content) return;
+        event.preventDefault();
+        content.scrollBy({top: event.deltaY, left: event.deltaX, behavior: 'auto'});
+    };
+    document.addEventListener('wheel', page.pendingPaymentWheelScrollHandler, {capture: true, passive: false});
 }
 
 /** 将取消对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
@@ -275,6 +303,7 @@ async function loadRawOrderData(page, orderId) {
  * 开发调试，正式发布前必须移除，避免无路由参数时展示测试订单。
  */
 export async function didMount() {
+    initPendingPaymentWheelScroll.call(this);
     const orderId = getOrderId(this);
 
     this.setState({
@@ -289,8 +318,7 @@ export async function didMount() {
         isCancellingOrder: false,
     });
 
-    // 已确认的真实画布 Container：div_mtgm8ahq。
-    // 后续仅在该 Container 下挂载订单支付 JSX，不新增虚构层级。
+    // 内容 JSX 挂载在既有待支付内容 Container 中；全局导航使用独立 Container。
     initPendingPaymentPurchaseBarAlignment.call(this);
     try {
         await loadRawOrderData(this, orderId);
@@ -298,6 +326,25 @@ export async function didMount() {
         console.error('[待付款页] 查询订单失败：', error);
         this.setState({ pageStatus: 'load-failed' });
     }
+}
+
+/** 卸载待支付页时释放页面级监听和倒计时。 */
+export function didUnmount() {
+    if (this.pendingPaymentCountdownTimer) window.clearTimeout(this.pendingPaymentCountdownTimer);
+    if (this.pendingPaymentPurchaseBarResizeObserver) this.pendingPaymentPurchaseBarResizeObserver.disconnect();
+    if (this.pendingPaymentWheelScrollHandler) {
+        document.removeEventListener('wheel', this.pendingPaymentWheelScrollHandler, true);
+    }
+}
+
+/** 打开商城首页。 */
+export function goToHome() {
+    window.location.href = HOME_PAGE_URL;
+}
+
+/** 打开当前登录人的订单列表。 */
+export function goToMyOrders() {
+    this.utils.router.push(MY_ORDER_PAGE_ID);
 }
 
 /**

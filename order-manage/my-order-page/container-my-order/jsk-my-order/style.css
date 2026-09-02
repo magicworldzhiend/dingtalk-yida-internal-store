@@ -1,47 +1,18 @@
 :root .my-order-page {
     box-sizing: border-box;
     display: flex;
-    height: 100dvh;
-    min-height: 0;
+    min-height: 100%;
     flex-direction: column;
     color: #1F2329;
 }
 
 :root .my-order-fixed-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     flex: 0 0 auto;
-    border-radius: 12px;
+    border-bottom: 1px solid #EEF0F3;
     background: #FFFFFF;
-}
-
-:root .my-order-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 64px;
-    padding: 0 4px;
-}
-
-:root .my-order-header h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-}
-
-:root .my-order-back, :root .my-order-header-space {
-    width: 100px;
-}
-
-:root .my-order-back {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 0;
-    border: 0;
-    color: #646A73;
-    background: transparent;
-    cursor: pointer;
-    font-size: 14px;
-    transition: color 160ms ease, transform 160ms ease;
 }
 
 :root .my-order-toolbar {
@@ -121,11 +92,6 @@
 }
 
 @media (hover: hover) {
-    :root .my-order-back:hover {
-        color: #1677FF;
-        transform: translateY(-1px);
-    }
-
     :root .my-order-search button:hover {
         border-radius: 8px;
         background: #F0F6FF;
@@ -136,11 +102,18 @@
 :root .my-order-list {
     display: grid;
     min-height: 0;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     gap: 12px;
-    overflow-y: auto;
+    overflow: visible;
     padding: 16px 0;
-    scrollbar-gutter: stable;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+:root .my-order-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 :root .my-order-card {
@@ -330,8 +303,7 @@
 @media screen and (max-width: 767px) {
     :root .my-order-page-mobile {
         margin: 0;
-        height: calc(100vh - 4px);
-        height: calc(100dvh - 4px);
+        min-height: 100%;
         padding-top: 0;
     }
 
@@ -391,7 +363,7 @@
     :root .my-order-list {
         gap: 8px;
         padding: 8px 8px 16px 0;
-        overflow-y: scroll;
+        overflow: visible;
         overscroll-behavior-y: contain;
         touch-action: pan-y;
         -webkit-overflow-scrolling: touch;
@@ -404,16 +376,7 @@
     }
 
     :root .my-order-list::-webkit-scrollbar {
-        width: 5px;
-    }
-
-    :root .my-order-list::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    :root .my-order-list::-webkit-scrollbar-thumb {
-        border-radius: 3px;
-        background: #D9DDE3;
+        display: none;
     }
 
     :root .my-order-card-top {
