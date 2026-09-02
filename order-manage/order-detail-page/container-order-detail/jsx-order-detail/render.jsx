@@ -9,7 +9,9 @@ function render() {
     /** 统一金额展示，避免浮点计算结果直接暴露给用户。 */
     function formatAmount(value) {
         const amount = Number(value);
-        return Number.isFinite(amount) ? amount.toFixed(2) : '--';
+        return Number.isFinite(amount)
+            ? amount.toFixed(2).replace(/\.?0+$/, '')
+            : '--';
     }
 
     function formatCountdown(value) {

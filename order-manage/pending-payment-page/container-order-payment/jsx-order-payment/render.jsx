@@ -8,7 +8,9 @@ function render() {
     /** 将金额格式化为人民币展示文本。 */
     const formatAmount = (value) => {
         const amount = Number(value);
-        return Number.isFinite(amount) ? amount.toFixed(2) : '--';
+        return Number.isFinite(amount)
+            ? amount.toFixed(2).replace(/\.?0+$/, '')
+            : '--';
     };
 
     /** 将时间格式化为订单页面展示文本。 */

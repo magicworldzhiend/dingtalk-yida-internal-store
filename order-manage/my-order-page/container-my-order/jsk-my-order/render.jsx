@@ -11,7 +11,9 @@ function render() {
     /** 格式化金额。 */
     function formatAmount(value) {
         const amount = Number(value);
-        return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+        return Number.isFinite(amount)
+            ? amount.toFixed(2).replace(/\.?0+$/, '')
+            : '0';
     }
 
     /** 格式化订单创建时间。 */

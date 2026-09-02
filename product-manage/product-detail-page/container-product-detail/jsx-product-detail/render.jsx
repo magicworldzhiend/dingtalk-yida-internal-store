@@ -15,6 +15,15 @@ function render() {
     const attrCount = attrList.length;
     const buyNum = Math.max(1, Number(product.buyNum || 1));
 
+    /** 统一金额展示：按分四舍五入，并省略小数部分末尾的 0。 */
+    const formatAmount = (value) => {
+        const amount = Number(value);
+
+        return Number.isFinite(amount)
+            ? amount.toFixed(2).replace(/\.?0+$/, '')
+            : '--';
+    };
+
     const getMatchedSkuList = () => {
         return attrValueList.filter((sku) => {
             const selectedValueList = Object.values(selectedMap);
@@ -32,8 +41,9 @@ function render() {
         : null;
     const previewSku = currentSku || matchedSkuList[0] || attrValueList[0] || {};
     const showPrice = Number(previewSku.price || 0);
-    const totalPrice = (Math.round((showPrice * buyNum + Number.EPSILON) * 100) / 100)
-        .toFixed(2);
+    const totalPrice = formatAmount(
+        Math.round((showPrice * buyNum + Number.EPSILON) * 100) / 100
+    );
     const availableStock = Number(previewSku.availableStock || 0);
     const isOutOfStock = availableStock <= 0;
     const productName = product.productName || '商品详情';
@@ -351,7 +361,7 @@ function render() {
                     <div class="product-detail-price-row">
                         <div>
                             <span class="product-detail-price-prefix">¥</span>
-                            <strong class="product-detail-price">{showPrice}</strong>
+                            <strong class="product-detail-price">{formatAmount(showPrice)}</strong>
                         </div>
                         <span class={isOutOfStock
                             ? 'product-detail-stock product-detail-stock-empty'

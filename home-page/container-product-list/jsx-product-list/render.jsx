@@ -57,6 +57,15 @@ function render(me, state, data, ctx) {
     const categoryId = String(pageState.appliedCategoryId || '');
     const isMobile = this.utils.isMobile();
 
+    /** 统一金额展示：按分四舍五入，并省略小数部分末尾的 0。 */
+    function formatAmount(value) {
+        const amount = Number(value);
+
+        return Number.isFinite(amount)
+            ? amount.toFixed(2).replace(/\.?0+$/, '')
+            : '--';
+    }
+
     /** 安全解析宜搭以 JSON 字符串保存的图片字段。 */
     function parseJson(value, defaultValue) {
         try {
@@ -386,7 +395,7 @@ function render(me, state, data, ctx) {
               >
                 {product.lowestPrice === null
                     ? '暂无售价'
-                    : '¥' + product.lowestPrice.toFixed(2)}
+                    : '¥' + formatAmount(product.lowestPrice)}
               </span>
 
                                 <span
