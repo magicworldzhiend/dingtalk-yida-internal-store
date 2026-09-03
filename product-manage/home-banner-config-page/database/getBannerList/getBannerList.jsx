@@ -39,36 +39,6 @@ function didFetch(content) {
             bannerMobileUrl = '';
         }
 
-        // 新记录保存为关联对象数组；历史记录仍可能是 _id 的双层 JSON 字符串。
-        var spuAssociationValue =
-            formData.associationFormField_mt7zpx6h ||
-            formData.associationFormField_mt7zpx6h_id ||
-            '';
-        var spuAssociation = [];
-
-        try {
-            var parsedAssociation = spuAssociationValue;
-
-            if (typeof parsedAssociation === 'string' && parsedAssociation) {
-                parsedAssociation = JSON.parse(parsedAssociation);
-            }
-
-            // 历史关联字段为双层 JSON 字符串：
-            // 第一次解析得到字符串，第二次解析才得到关联数组。
-            if (typeof parsedAssociation === 'string') {
-                parsedAssociation = JSON.parse(parsedAssociation);
-            }
-
-            spuAssociation = Array.isArray(parsedAssociation)
-                ? parsedAssociation
-                : [];
-        } catch (error) {
-            console.error('解析关联 SPU 失败：', error);
-            spuAssociation = [];
-        }
-
-        var selectedSpu = spuAssociation[0] || {};
-
         var latestModifiedTime = '-';
         if (item.gmtModified) {
             var date = new Date(item.gmtModified);
@@ -91,11 +61,8 @@ function didFetch(content) {
             latestSubmitter: userName.zh_CN || userName.pureEn_US || item.modifier || '-',
             latestModifiedTime: latestModifiedTime,
 
-            // 表格可展示字段
-            spuId: selectedSpu.title || '',
-
-            // 编辑使用的隐藏字段
-            spuFormInstId: selectedSpu.instanceId || '',
+            // 表格可展示字段，同时作为编辑回填与删除自动化的唯一关联键。
+            spuId: formData.textField_mtl0x4j7 || '',
             bannerImageJson: bannerImageJson,
             sortValue: formData.numberfield_4BCfVwCO_value === ''
                 ? 0

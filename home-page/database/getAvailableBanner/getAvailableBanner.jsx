@@ -24,26 +24,8 @@ function didFetch(content) {
                 src = domain + src;
             }
 
-            // 新记录保存为关联对象数组；历史记录仍可能是 _id 的双层 JSON 字符串。
-            let relationValue = item.formData.associationFormField_mt7zpx6h
-                || item.formData.associationFormField_mt7zpx6h_id
-                || [];
-
-            try {
-                if (typeof relationValue === 'string') {
-                    relationValue = JSON.parse(relationValue);
-                }
-
-                if (typeof relationValue === 'string') {
-                    relationValue = JSON.parse(relationValue);
-                }
-            } catch (error) {
-                relationValue = [];
-            }
-
-            const relationList = Array.isArray(relationValue) ? relationValue : [];
-            // 关联对象的 title 是 Banner 配置时写入的业务 SPU_ID。
-            const spuId = String((relationList[0] && relationList[0].title) || '');
+            // 普通文本字段作为 Banner 跳转参数与删除自动化的唯一关联键。
+            const spuId = String(item.formData.textField_mtl0x4j7 || '');
 
             return {
                 src: src,

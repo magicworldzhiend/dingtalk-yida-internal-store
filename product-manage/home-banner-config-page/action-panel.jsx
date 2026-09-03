@@ -5,9 +5,17 @@
  */
 
 const BANNER_IMAGE_FIELD_ID = 'imageField_mt9t5mqv';
+const BANNER_SPU_ID_FIELD_ID = 'textField_mtl0x4j7';
 const BANNER_IMAGE_MAX_DIMENSION = 1920;
 const IMAGE_COMPRESS_QUALITY = 0.8;
 const COMPRESSOR_SCRIPT_URL = 'https://g.alicdn.com/code/lib/compressorjs/1.1.1/compressor.min.js';
+
+/** 根据持久化的 SPU 业务编号定位 Banner 编辑下拉框所需的表单实例。 */
+function findSpuByBusinessId(spuList, spuId) {
+    return (Array.isArray(spuList) ? spuList : []).find(function (item) {
+        return String(item.spuId || '') === String(spuId || '');
+    }) || null;
+}
 
 // 当页面渲染完毕后马上调用下面的函数，这个函数是在当前页面 - 设置 - 生命周期 - 页面加载完成时中被关联的。
 export function didMount() {
@@ -296,11 +304,14 @@ export function onOpenEditBanner(rowData) {
         return;
     }
 
+    var selectedSpu = findSpuByBusinessId(this.state.spuList, rowData.spuId);
+    var selectedSpuFormInstId = selectedSpu ? selectedSpu.value : '';
+
     // 当前要更新的首页轮播记录实例 ID
     this.setState({
         bannerDialogMode: 'edit',
         editingBannerFormInstId: rowData.formInstId,
-        editingSpuFormInstId: rowData.spuFormInstId || '',
+        editingSpuFormInstId: selectedSpuFormInstId,
     });
 
     this.$('dialog_mt9t5mqt').show(() => {
@@ -320,9 +331,16 @@ export function onOpenEditBanner(rowData) {
         imageField.set('autoUpload', false);
 
         // false：编辑回填时不触发 SPU 值变化，保留管理员此前自定义的轮播图。
-        spuSelect.setValue(rowData.spuFormInstId || '', {
+        spuSelect.setValue(selectedSpuFormInstId, {
             triggerChange: false,
         });
+
+        if (!selectedSpu) {
+            this.utils.toast({
+                title: '该 Banner 缺少有效 SPU_ID，请重新选择商品后保存。',
+                type: 'warning',
+            });
+        }
 
         imageField.setValue(bannerImages, {
             triggerChange: false,
@@ -404,7 +422,7 @@ export async function submitEditBanner() {
         return;
     }
 
-    var spuFormInstId = spuSelect.get('value')
+    var selectedSpuFormInstId = spuSelect.get('value')
         || this.state.editingSpuFormInstId
         || '';
     var bannerImages = imageField.get('value') || [];
@@ -418,7 +436,7 @@ export async function submitEditBanner() {
         return;
     }
 
-    if (!spuFormInstId) {
+    if (!selectedSpuFormInstId) {
         this.utils.toast({
             title: '请选择商品 SPU。',
             type: 'error',
@@ -435,7 +453,7 @@ export async function submitEditBanner() {
     }
 
     var selectedSpu = (this.state.spuList || []).find(function (item) {
-        return item.value === spuFormInstId;
+        return item.value === selectedSpuFormInstId;
     });
 
     if (!selectedSpu) {
@@ -454,15 +472,6 @@ export async function submitEditBanner() {
         });
         return;
     }
-
-    var associationArray = [{
-        formType: 'receipt',
-        formUuid: 'FORM-173F54EE060A41AF99AA1A776B15917CP6H3',
-        instanceId: selectedSpu.value,
-        subTitle: selectedSpu.productName,
-        appType: window.pageConfig.appType,
-        title: selectedSpu.spuId,
-    }];
 
     var normalizedBannerImages = bannerImages.map(function (file) {
         var response = file.response || {};
@@ -511,10 +520,8 @@ export async function submitEditBanner() {
     }
 
     var updateFormData = {
-        // 关联字段实际要求双层 JSON
-        associationFormField_mt7zpx6h_id: JSON.stringify(
-            JSON.stringify(associationArray)
-        ),
+        // SPU 业务编号既是商品跳转参数，也是删除 Banner 自动化的唯一筛选条件。
+        [BANNER_SPU_ID_FIELD_ID]: selectedSpu.spuId,
         textField_mt806lzd: selectedSpu.productName,
         imagefield_0Qbn7EcV: JSON.stringify(normalizedBannerImages),
         numberfield_4BCfVwCO: numberSortValue,
@@ -529,16 +536,10 @@ export async function submitEditBanner() {
         );
 
         if (isCreate) {
-            // 新增接口的关联表单字段使用标准关联对象数组；历史记录的更新仍沿用已验证的 _id 双层 JSON 格式。
-            var createFormData = Object.assign({}, updateFormData, {
-                associationFormField_mt7zpx6h: associationArray,
-            });
-            delete createFormData.associationFormField_mt7zpx6h_id;
-
             await this.utils.yida.saveFormData({
                 formUuid: 'FORM-FSD66281M0N88KURKUU4B7EQZ3GA2HPVHZ7TM1',
                 appType: window.pageConfig.appType,
-                formDataJson: JSON.stringify(createFormData),
+                formDataJson: JSON.stringify(updateFormData),
             });
         } else {
             await this.utils.yida.updateFormData({
