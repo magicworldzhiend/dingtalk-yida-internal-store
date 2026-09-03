@@ -273,10 +273,15 @@ export async function didMount() {
     refreshOrderDetailJsx(this);
     try {
         const userId = this.utils.getLoginUserId();
-        const [order, goodsList, departmentName] = await Promise.all([loadOrder(this, userId, orderNo), loadOrderDetails(this, orderNo), loadDepartment(this)]);
+        // 先验证订单主记录归属，再读取订单明细，避免未授权订单号触发明细查询。
+        const [order, departmentName] = await Promise.all([
+            loadOrder(this, userId, orderNo),
+            loadDepartment(this)
+        ]);
         if (!order) {
             this.setState({orderDetailPageStatus: 'not-found'});
         } else {
+            const goodsList = await loadOrderDetails(this, orderNo);
             this.setState({
                 orderDetailPageStatus: 'loaded',
                 order: order,

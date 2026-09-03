@@ -4,6 +4,11 @@
 function render() {
     const pageState = this.state || {};
     const isMobile = this.utils.isMobile();
+    if (pageState.productDetailPageStatus === 'missing-spu-id') {
+        return <div class="product-detail-page">
+            <div class="product-detail-empty">缺少商品编号，请从首页重新选择商品。</div>
+        </div>;
+    }
     const product = pageState.product || {};
     const attrList = product.attrList || [];
     const attrValueList = product.attrValueList || [];

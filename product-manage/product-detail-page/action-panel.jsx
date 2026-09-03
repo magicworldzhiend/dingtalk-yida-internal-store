@@ -1,5 +1,4 @@
 const YIDA_OSS_PREFIX = "https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD";
-const DEFAULT_DEBUG_SPU_ID = "520260824163552";
 const DEFAULT_HOME_URL = "https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench";
 const MY_ORDER_PAGE_ID = "FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK";
 // const getGoodsImageUrl = (picStr) => {
@@ -40,23 +39,37 @@ async function getGoodsBySpu(spu, instance) {
         return null;
     }
 
+    const formData = instanceObj.formData || {};
+    let imageList = [];
+    try {
+        const rawImageList = JSON.parse(formData.imageField_msq691ft || "[]");
+        imageList = Array.isArray(rawImageList)
+            ? rawImageList
+                .map((item) => item && (item.downloadUrl || item.url || item.previewUrl))
+                .filter(Boolean)
+                .map((imageUrl) => /^https?:\/\//i.test(imageUrl)
+                    ? imageUrl
+                    : YIDA_OSS_PREFIX + imageUrl)
+            : [];
+    } catch (error) {
+        console.warn("[商品详情] 商品主图数据格式异常，已忽略该图片字段", error);
+    }
+
     const product = {
         // 级联分类名称
-        categoryNames:
-            instanceObj.formData.cascadeSelectField_msv95kk7.join("/") || [],
+        categoryNames: Array.isArray(formData.cascadeSelectField_msv95kk7)
+            ? formData.cascadeSelectField_msv95kk7.join("/")
+            : "",
         // 级联分类的ID
-        categoryIds: instanceObj.formData.cascadeSelectField_msv95kk7_id || [],
+        categoryIds: formData.cascadeSelectField_msv95kk7_id || [],
         // 上下架
-        shelfStatus: instanceObj.formData.radioField_msq691fu || "",
+        shelfStatus: formData.radioField_msq691fu || "",
         // SPU编号
-        spuNo: instanceObj.formData.serialNumberField_mszwuoff || "",
+        spuNo: formData.serialNumberField_mszwuoff || "",
         // 商品名称
-        productName: instanceObj.formData.textField_msq691fs || "",
-        // 图片，字符串转数组
-        imageList:
-            JSON.parse(instanceObj.formData.imageField_msq691ft).map(
-                (item) => YIDA_OSS_PREFIX + item.downloadUrl,
-            ) || "[]",
+        productName: formData.textField_msq691fs || "",
+        // 图片字段异常时降级为空数组，不阻断商品详情展示。
+        imageList: imageList,
     };
 
     return product;
@@ -450,8 +463,12 @@ export function initProductDetailSwiper() {
 export async function didMount() {
     initProductDetailWheelScroll.call(this);
 
-    // 正常从首页路由读取 SPU_ID；直接调试详情页时回退到固定测试商品。
-    const spuID = this.utils.getUrlParams().spuID || DEFAULT_DEBUG_SPU_ID;
+    // 商品详情只能通过携带 SPU_ID 的业务路由进入，禁止回退到固定测试商品。
+    const spuID = String(this.utils.getUrlParams().spuID || "").trim();
+    if (!spuID) {
+        this.setState({productDetailPageStatus: "missing-spu-id", product: null});
+        return;
+    }
 
 
     const product = {};
