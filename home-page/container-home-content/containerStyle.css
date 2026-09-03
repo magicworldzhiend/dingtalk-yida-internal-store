@@ -29,6 +29,6 @@
         overflow-y: scroll;
         touch-action: pan-y;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: 12px;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
 }

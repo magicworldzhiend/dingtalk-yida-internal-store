@@ -12,6 +12,21 @@
 
 @media screen and (max-width: 767px) {
     :root {
-        display: none;
+        position: fixed;
+        z-index: 1001;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: none;
+        height: calc(60px + env(safe-area-inset-bottom));
+        min-height: calc(60px + env(safe-area-inset-bottom));
+        margin: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        overflow: hidden;
+        border: 0;
+        border-top: 1px solid #EEF0F3;
+        border-radius: 0;
+        box-shadow: 0 -4px 12px rgba(31, 35, 41, 0.06);
     }
 }

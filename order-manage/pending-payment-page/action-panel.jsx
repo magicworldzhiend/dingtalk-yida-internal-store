@@ -422,7 +422,6 @@ export async function onConfirmPayment() {
  */
 export async function onCancelOrder() {
     const order = this.state.order || {};
-    const orderDetail = this.state.orderDetail || {};
 
     if (order.status !== '待支付' || !order.formInstId) {
         this.utils.toast({ title: '当前订单不可取消，请刷新后重试', type: 'warning' });
@@ -455,18 +454,7 @@ export async function onCancelOrder() {
         });
         refreshPendingPaymentJsx(this);
         this.utils.toast({ title: '订单已取消', type: 'success' });
-
-        if (!orderDetail.spuId) {
-            this.utils.toast({
-                title: '订单已取消，但未获取到商品详情路由参数',
-                type: 'warning',
-            });
-            return;
-        }
-
-        window.location.href = window.location.origin
-            + '/APP_VZ5VTLROLBD0JJKKLROD/preview/FORM-CBE983ABBA9A456882844971E75A61FC1M0L?spuID='
-            + encodeURIComponent(orderDetail.spuId);
+        this.utils.router.replace(MY_ORDER_PAGE_ID);
     } catch (error) {
         console.error('[待付款页] 取消订单失败：', error);
         this.utils.toast({

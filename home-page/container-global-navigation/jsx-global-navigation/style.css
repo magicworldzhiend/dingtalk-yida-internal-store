@@ -50,3 +50,46 @@
     line-height: 16px;
     text-align: center;
 }
+
+:root .mobile-navigation-icon {
+    display: none;
+}
+
+@media screen and (max-width: 767px) {
+    :root .home-global-navigation {
+        height: 60px;
+        justify-content: stretch;
+        gap: 0;
+    }
+
+    :root .home-global-navigation button {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 6px 0 4px;
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    :root .home-global-navigation .mobile-navigation-icon {
+        display: block;
+        width: 27px;
+        height: 27px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    :root .home-global-navigation-active::after {
+        display: none;
+    }
+
+    :root .home-global-navigation-badge {
+        top: 3px;
+        right: 27%;
+    }
+}

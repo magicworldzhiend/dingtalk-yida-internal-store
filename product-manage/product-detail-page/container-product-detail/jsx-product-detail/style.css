@@ -565,7 +565,7 @@
 @media screen and (max-width: 767px) {
     :root .product-detail-page {
         /* 为固定合计栏和系统安全区预留空间，避免遮挡最后的 SKU 细节图。 */
-        padding: 4px 0 calc(64px + env(safe-area-inset-bottom));
+        padding: 4px 0 calc(124px + env(safe-area-inset-bottom));
     }
 
     :root .product-detail-gallery {
@@ -667,9 +667,9 @@
     }
 
     :root .product-detail-purchase-bar {
-        bottom: 0;
+        bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 60px;
-        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        padding: 8px 0;
         opacity: 1;
         visibility: visible;
     }

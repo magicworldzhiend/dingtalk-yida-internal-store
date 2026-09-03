@@ -414,7 +414,9 @@
     transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
-.pending-payment-remark-card textarea::placeholder { color: #9ca3af; }
+.pending-payment-remark-card textarea::placeholder {
+    color: #9ca3af;
+}
 
 .pending-payment-remark-card textarea:focus {
     border-color: #1677ff;
@@ -435,9 +437,14 @@
     font-size: 12px;
 }
 
-.pending-payment-remark-footer strong { color: #6b7280; font-weight: 500; }
+.pending-payment-remark-footer strong {
+    color: #6b7280;
+    font-weight: 500;
+}
 
-.pending-payment-remark-footer .pending-payment-remark-count-exceeded { color: #e5484d; }
+.pending-payment-remark-footer .pending-payment-remark-count-exceeded {
+    color: #e5484d;
+}
 
 .pending-payment-dialog h2,
 .pending-payment-dialog p {
@@ -490,8 +497,12 @@
 }
 
 @keyframes pending-payment-mask-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .pending-payment-empty {
@@ -508,7 +519,7 @@
     .pending-payment-page {
         /* 为固定支付栏及 iPhone 底部安全区预留实际可滚动空间，避免末项被遮挡。 */
         box-sizing: border-box;
-        padding: 4px 0 calc(64px + env(safe-area-inset-bottom));
+        padding: 4px 0 calc(124px + env(safe-area-inset-bottom));
         gap: 4px;
     }
 
@@ -552,8 +563,9 @@
     }
 
     .pending-payment-bar {
+        bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 60px;
-        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        padding: 8px 0;
     }
 
     .pending-payment-bar-content button {

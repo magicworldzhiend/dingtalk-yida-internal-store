@@ -597,8 +597,18 @@
 
 @media screen and (max-width: 767px) {
     :root .order-detail-page {
+        /* 可直接调节：待支付需避开支付栏与底部导航，其他状态只需避开底部导航。 */
+        --order-detail-mobile-bottom-space-wait-pay: 120px;
+        --order-detail-mobile-bottom-space-normal: 60px;
         gap: 4px;
-        padding: 4px 0 calc(76px + env(safe-area-inset-bottom));
+    }
+
+    :root .order-detail-page-wait-pay {
+        padding: 4px 0 calc(var(--order-detail-mobile-bottom-space-wait-pay) + env(safe-area-inset-bottom));
+    }
+
+    :root .order-detail-page-normal {
+        padding: 4px 0 calc(var(--order-detail-mobile-bottom-space-normal) + env(safe-area-inset-bottom));
     }
 
     :root .order-detail-card, :root .order-detail-empty-card {
@@ -674,10 +684,21 @@
     :root .order-detail-goods-summary {
         grid-column: 2 / 3;
         grid-row: 2;
-        display: flex;
-        justify-items: start;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) max-content;
+        align-items: center;
         gap: 8px;
+        min-width: 0;
+    }
+
+    :root .order-detail-goods-summary em {
+        min-width: 0;
+    }
+
+    :root .order-detail-goods-summary strong {
+        white-space: nowrap;
+        font-size: 16px;
+        line-height: 1.2;
     }
 
     :root .order-detail-goods-arrow {
@@ -701,8 +722,9 @@
     }
 
     :root .order-detail-payment-bar {
+        bottom: calc(60px + env(safe-area-inset-bottom));
         min-height: 60px;
-        padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+        padding: 8px 0;
     }
 
     :root .order-detail-payment-bar-content {

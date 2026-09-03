@@ -279,6 +279,7 @@ export async function cancelPendingOrder() {
             order: Object.assign({}, order, {status: '已关闭', closeStatus: '关闭（未释放库存）', closeTime: closeTime, isTimeoutClosed: false})
         });
         this.utils.toast({title: '订单已取消', type: 'success'});
+        this.utils.router.replace(MY_ORDER_PAGE_ID);
     } catch (error) {
         console.error('[订单详情] 取消订单失败', error);
         this.utils.toast({title: error.message || '订单取消失败，请稍后重试', type: 'error'});

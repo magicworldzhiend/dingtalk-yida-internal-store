@@ -33,3 +33,41 @@
     background: #1677FF;
     content: '';
 }
+
+:root .mobile-navigation-icon {
+    display: none;
+}
+
+@media screen and (max-width: 767px) {
+    :root .order-detail-global-navigation {
+        height: 60px;
+        justify-content: stretch;
+        gap: 0;
+    }
+
+    :root .order-detail-global-navigation button {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 6px 0 4px;
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    :root .order-detail-global-navigation .mobile-navigation-icon {
+        display: block;
+        width: 27px;
+        height: 27px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    :root .order-detail-global-navigation-active::after {
+        display: none;
+    }
+}

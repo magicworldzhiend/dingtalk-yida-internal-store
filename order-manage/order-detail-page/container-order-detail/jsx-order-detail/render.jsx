@@ -44,7 +44,12 @@ function render() {
         if (order.status === '已关闭' && (order.isTimeoutClosed || !order.paymentTime)) {
             return [
                 {title: '待支付', time: order.createTime, state: 'complete', lineTone: 'closing'},
-                {title: order.isTimeoutClosed ? '已超时关闭' : '已关闭', time: order.closeTime, state: 'current', tone: 'closed'},
+                {
+                    title: order.isTimeoutClosed ? '已超时关闭' : '已关闭',
+                    time: order.closeTime,
+                    state: 'current',
+                    tone: 'closed'
+                },
                 {title: '已完成', state: 'upcoming'}
             ];
         }
@@ -81,19 +86,25 @@ function render() {
 
     const timeline = getTimeline();
     return (
-        <div class="order-detail-page">
-            {!isMobile && <div class="order-detail-global-layout"><nav class="order-detail-breadcrumb" aria-label="页面层级">
-                <button type="button" onClick={() => page.goToHome()}>首页</button>
-                <span aria-hidden="true">/</span>
-                <button type="button" onClick={() => page.backToOrderList()}>我的订单</button>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page">订单详情</span>
-            </nav></div>}
+        <div class={order.status === '待支付'
+            ? 'order-detail-page order-detail-page-wait-pay'
+            : 'order-detail-page order-detail-page-normal'}>
+            {!isMobile && <div class="order-detail-global-layout">
+                <nav class="order-detail-breadcrumb" aria-label="页面层级">
+                    <button type="button" onClick={() => page.goToHome()}>首页</button>
+                    <span aria-hidden="true">/</span>
+                    <button type="button" onClick={() => page.backToOrderList()}>我的订单</button>
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page">订单详情</span>
+                </nav>
+            </div>}
             <section class="order-detail-card order-detail-timeline-card">
                 <div class="order-detail-section-heading"><h2>订单状态</h2></div>
                 <div
                     class={'order-detail-timeline order-detail-timeline-' + timeline.length}>{timeline.map((item, index) =>
-                    <div class={'order-detail-timeline-item order-detail-timeline-item-' + item.state + (item.tone ? ' order-detail-timeline-item-' + item.tone : '')} key={item.title}>
+                    <div
+                        class={'order-detail-timeline-item order-detail-timeline-item-' + item.state + (item.tone ? ' order-detail-timeline-item-' + item.tone : '')}
+                        key={item.title}>
                         <span class="order-detail-timeline-dot"></span>{index < timeline.length - 1 && <span
                         class={'order-detail-timeline-line' + (item.lineTone ? ' order-detail-timeline-line-' + item.lineTone : '')}></span>}<strong>{item.title}</strong><em>{page.formatOrderDetailDateTime(item.time)}</em>
                     </div>)}</div>
@@ -159,14 +170,32 @@ function render() {
                     <span key={goods.goodsId || index}>暂无商品图片</span>)}</div>
             </section> : null}
             {order.status === '待支付' && <footer class="order-detail-payment-bar">
-                <div class="order-detail-payment-bar-content"><div><span>应付</span><strong>¥ {formatAmount(order.payableAmount)}</strong></div>
-                    <div class="order-detail-payment-actions"><button type="button" class="order-detail-cancel-button" disabled={state.isCancellingOrder} onClick={() => page.openCancelOrderDialog()}>取消订单</button>
-                        <button type="button" disabled={state.isCancellingOrder} onClick={() => page.goToPendingPayment()}>支付订单</button></div>
+                <div class="order-detail-payment-bar-content">
+                    <div><span>应付</span><strong>¥ {formatAmount(order.payableAmount)}</strong></div>
+                    <div class="order-detail-payment-actions">
+                        <button type="button" class="order-detail-cancel-button" disabled={state.isCancellingOrder}
+                                onClick={() => page.openCancelOrderDialog()}>取消订单
+                        </button>
+                        <button type="button" disabled={state.isCancellingOrder}
+                                onClick={() => page.goToPendingPayment()}>支付订单
+                        </button>
+                    </div>
                 </div>
             </footer>}
-            {state.isCancelDialogVisible && <div class="order-detail-dialog-mask" onClick={() => page.closeCancelOrderDialog()}>
-                <section class="order-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><h2>是否取消订单？</h2><p>取消后订单不可恢复，确定不再继续支付吗？</p><div><button type="button" disabled={state.isCancellingOrder} onClick={() => page.closeCancelOrderDialog()}>暂不取消</button><button type="button" class="order-detail-dialog-danger" disabled={state.isCancellingOrder} onClick={() => page.cancelPendingOrder()}>{state.isCancellingOrder ? '取消中...' : '确认取消'}</button></div></section>
-            </div>}
+            {state.isCancelDialogVisible &&
+                <div class="order-detail-dialog-mask" onClick={() => page.closeCancelOrderDialog()}>
+                    <section class="order-detail-dialog" role="dialog" aria-modal="true"
+                             onClick={(event) => event.stopPropagation()}><h2>是否取消订单？</h2>
+                        <p>取消后订单不可恢复，确定不再继续支付吗？</p>
+                        <div>
+                            <button type="button" disabled={state.isCancellingOrder}
+                                    onClick={() => page.closeCancelOrderDialog()}>暂不取消
+                            </button>
+                            <button type="button" class="order-detail-dialog-danger" disabled={state.isCancellingOrder}
+                                    onClick={() => page.cancelPendingOrder()}>{state.isCancellingOrder ? '取消中...' : '确认取消'}</button>
+                        </div>
+                    </section>
+                </div>}
         </div>
     );
 }
