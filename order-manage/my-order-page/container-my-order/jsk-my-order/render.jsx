@@ -143,8 +143,6 @@ function render() {
                                     </button>
                                     {order.status === '待支付' && <button type="button" class="my-order-primary"
                                                                           onClick={() => page.goToPendingPayment(order)}>去支付</button>}
-                                    {order.status === '待领用' && <button type="button" class="my-order-primary"
-                                                                          onClick={() => page.confirmOrderClaim(order)}>确认领取</button>}
                                 </div>
                             </div>
                         </article>

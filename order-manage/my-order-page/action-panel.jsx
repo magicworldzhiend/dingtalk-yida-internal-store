@@ -318,25 +318,6 @@ export async function goToPendingPayment(order) {
     }
 }
 
-/** 确认领取订单商品。 */
-export function confirmOrderClaim(order) {
-    const page = this;
-    page.utils.dialog({
-        method: 'confirm',
-        title: '确认领取',
-        content: '确认已领取该订单商品吗？',
-        footerActions: ['cancel', 'ok'],
-        onOk: async () => {
-            await page.dataSourceMap.updateMyOrder.load({
-                formInstId: order.formInstId,
-                updateFormDataJson: JSON.stringify({radioField_mt2mw54h: '已完成', dateField_mt2qewds: Date.now()})
-            });
-            page.utils.toast({title: '已确认领取', type: 'success'});
-            await page.reloadMyOrderList({status: page.state.myOrderStatus, keyword: page.state.myOrderKeyword});
-        }
-    });
-}
-
 /** 打开指定订单的详情页面。 */
 export function openMyOrderDetail(order) {
     if (!order || !order.orderId) {

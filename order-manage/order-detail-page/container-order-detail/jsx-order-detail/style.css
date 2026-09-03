@@ -343,10 +343,14 @@
     white-space: nowrap;
 }
 
+:root .order-detail-goods-price-quantity {
+    margin-top: 2px;
+}
+
 :root .order-detail-goods-summary {
     display: grid;
+    align-self: center;
     justify-items: end;
-    gap: 8px;
 }
 
 :root .order-detail-goods-summary strong {
@@ -659,7 +663,7 @@
     }
 
     :root .order-detail-goods-item {
-        grid-template-columns: 72px minmax(0, 1fr) 18px;
+        grid-template-columns: 72px minmax(0, 1fr) max-content 18px;
         gap: 10px;
         padding: 10px;
     }
@@ -682,17 +686,9 @@
     }
 
     :root .order-detail-goods-summary {
-        grid-column: 2 / 3;
-        grid-row: 2;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) max-content;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-    }
-
-    :root .order-detail-goods-summary em {
-        min-width: 0;
+        grid-column: 3;
+        grid-row: 1;
+        align-self: center;
     }
 
     :root .order-detail-goods-summary strong {
@@ -702,8 +698,8 @@
     }
 
     :root .order-detail-goods-arrow {
-        grid-column: 3;
-        grid-row: 1 / span 2;
+        grid-column: 4;
+        grid-row: 1;
     }
 
     :root .order-detail-countdown {

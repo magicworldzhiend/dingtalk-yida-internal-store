@@ -1,7 +1,15 @@
 function didFetch(content) {
-    var data = content && content.data ? content.data : [];
-    var currentPage = Number(content && content.currentPage) || 1;
+    // 自定义数据源运行时可能直接传入响应，也可能额外包装在 result 中。
+    var response = content && content.result ? content.result : (content || {});
+    var data = Array.isArray(response.data) ? response.data : [];
+    var currentPage = Number(response.currentPage) || 1;
     var pageSize = 20;
+    var totalCount = Number(response.totalCount);
+
+    // 搜索表单接口会返回 totalCount；异常响应时保底为 0，不能以当前页条数冒充总数。
+    if (!Number.isFinite(totalCount)) {
+        totalCount = 0;
+    }
 
     var pad = function (value) {
         return value < 10 ? '0' + value : String(value);
@@ -63,6 +71,8 @@ function didFetch(content) {
 
             // 表格可展示字段，同时作为编辑回填与删除自动化的唯一关联键。
             spuId: formData.textField_mtl0x4j7 || '',
+            remark: formData.textField_mtl49hth || '',
+            gradientColor: formData.textField_mtl49htj || '',
             bannerImageJson: bannerImageJson,
             sortValue: formData.numberfield_4BCfVwCO_value === ''
                 ? 0
@@ -71,9 +81,9 @@ function didFetch(content) {
     });
 
     return {
-        idCursor: content.idCursor,
+        idCursor: response.idCursor,
         data: result,
-        totalCount: content.totalCount || 0,
+        totalCount: totalCount,
         currentPage: currentPage
     };
 }

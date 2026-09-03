@@ -6,6 +6,13 @@
 
 const BANNER_IMAGE_FIELD_ID = 'imageField_mt9t5mqv';
 const BANNER_SPU_ID_FIELD_ID = 'textField_mtl0x4j7';
+const BANNER_FORM_REMARK_FIELD_ID = 'textField_mtl49hth';
+const BANNER_FORM_GRADIENT_COLOR_FIELD_ID = 'textField_mtl49htj';
+const BANNER_REMARK_INPUT_ID = 'textField_mtl4dxuc';
+const BANNER_GRADIENT_COLOR_INPUT_ID = 'textField_mtl4dxuh';
+const DEFAULT_BANNER_GRADIENT_COLOR = '#182334';
+const BANNER_GRADIENT_SAMPLE_START_RATIO = 2 / 3;
+const BANNER_GRADIENT_COLOR_DARKEN_RATIO = 0.68;
 const BANNER_IMAGE_MAX_DIMENSION = 1920;
 const IMAGE_COMPRESS_QUALITY = 0.8;
 const COMPRESSOR_SCRIPT_URL = 'https://g.alicdn.com/code/lib/compressorjs/1.1.1/compressor.min.js';
@@ -15,6 +22,38 @@ function findSpuByBusinessId(spuList, spuId) {
     return (Array.isArray(spuList) ? spuList : []).find(function (item) {
         return String(item.spuId || '') === String(spuId || '');
     }) || null;
+}
+
+/** 将管理员输入的十六进制颜色规范为 #RRGGBB；非法输入返回空字符串。 */
+function normalizeBannerGradientColor(value) {
+    var match = String(value || '').trim().match(/^#?([0-9a-fA-F]{6})$/);
+    return match ? '#' + match[1].toUpperCase() : '';
+}
+
+/** 兼容读取宜搭不同组件实例的当前值。 */
+function getComponentValue(component) {
+    if (!component) {
+        return undefined;
+    }
+
+    if (typeof component.get === 'function') {
+        return component.get('value');
+    }
+
+    return typeof component.getValue === 'function'
+        ? component.getValue()
+        : undefined;
+}
+
+/** 将 RGB 色值转换为可持久化的 #RRGGBB 格式。 */
+function toHexColor(red, green, blue) {
+    var toHex = function (value) {
+        return Math.max(0, Math.min(255, Math.round(value)))
+            .toString(16)
+            .padStart(2, '0');
+    };
+
+    return '#' + toHex(red) + toHex(green) + toHex(blue);
 }
 
 // 当页面渲染完毕后马上调用下面的函数，这个函数是在当前页面 - 设置 - 生命周期 - 页面加载完成时中被关联的。
@@ -312,14 +351,20 @@ export function onOpenEditBanner(rowData) {
         bannerDialogMode: 'edit',
         editingBannerFormInstId: rowData.formInstId,
         editingSpuFormInstId: selectedSpuFormInstId,
+        editingBannerImages: bannerImages,
+        isEditingBannerImageChanged: false,
+        bannerGradientColor: normalizeBannerGradientColor(rowData.gradientColor)
+            || DEFAULT_BANNER_GRADIENT_COLOR,
     });
 
     this.$('dialog_mt9t5mqt').show(() => {
         var spuSelect = this.$('selectField_mt9t5mqx');
         var imageField = this.$('imageField_mt9t5mqv');
         var numberField = this.$('numberField_mt9t5mqw');
+        var remarkField = this.$(BANNER_REMARK_INPUT_ID);
+        var gradientColorField = this.$(BANNER_GRADIENT_COLOR_INPUT_ID);
 
-        if (!spuSelect || !imageField || !numberField) {
+        if (!spuSelect || !imageField || !numberField || !remarkField) {
             this.utils.toast({
                 title: '编辑弹窗字段未找到，请确认打开的是编辑弹窗。',
                 type: 'error',
@@ -349,6 +394,17 @@ export function onOpenEditBanner(rowData) {
         numberField.setValue(Number(rowData.sortValue || 0), {
             triggerChange: false,
         });
+
+        remarkField.setValue(rowData.remark || '', {
+            triggerChange: false,
+        });
+        if (gradientColorField) {
+            gradientColorField.setValue(
+                normalizeBannerGradientColor(rowData.gradientColor)
+                    || DEFAULT_BANNER_GRADIENT_COLOR,
+                { triggerChange: false }
+            );
+        }
     });
 }
 
@@ -361,14 +417,19 @@ export function onOpenCreateBanner() {
         bannerDialogMode: 'create',
         editingBannerFormInstId: '',
         editingSpuFormInstId: '',
+        editingBannerImages: [],
+        isEditingBannerImageChanged: false,
+        bannerGradientColor: DEFAULT_BANNER_GRADIENT_COLOR,
     });
 
     this.$('dialog_mt9t5mqt').show(() => {
         var spuSelect = this.$('selectField_mt9t5mqx');
         var imageField = this.$('imageField_mt9t5mqv');
         var numberField = this.$('numberField_mt9t5mqw');
+        var remarkField = this.$(BANNER_REMARK_INPUT_ID);
+        var gradientColorField = this.$(BANNER_GRADIENT_COLOR_INPUT_ID);
 
-        if (!spuSelect || !imageField || !numberField) {
+        if (!spuSelect || !imageField || !numberField || !remarkField) {
             this.utils.toast({
                 title: '新增弹窗字段未找到，请确认当前页面组件配置。',
                 type: 'error',
@@ -380,6 +441,12 @@ export function onOpenCreateBanner() {
         spuSelect.setValue('', { triggerChange: false });
         imageField.setValue([], { triggerChange: false });
         numberField.setValue(0, { triggerChange: false });
+        remarkField.setValue('', { triggerChange: false });
+        if (gradientColorField) {
+            gradientColorField.setValue(DEFAULT_BANNER_GRADIENT_COLOR, {
+                triggerChange: false,
+            });
+        }
     });
 }
 
@@ -398,6 +465,136 @@ export function onEditBannerSpuChange({ value }) {
 
     // 自动回填 SPU 主图；用户仍可在上传组件中自行删除、替换。
     this.$('imageField_mt9t5mqv').setValue(selectedSpu.images || []);
+    this.setState({
+        editingBannerImages: selectedSpu.images || [],
+        isEditingBannerImageChanged: true,
+    });
+
+    this.detectBannerGradientColor(selectedSpu.images && selectedSpu.images[0])
+        .then((color) => this.applyBannerGradientColor(color))
+        .catch(() => undefined);
+}
+
+/**
+ * 从图片底部三分之一采样主色，返回适合文字叠加展示的深色十六进制值。
+ * 本地 File 一定可采样；已上传的跨域签名 URL 受浏览器 CORS 限制，失败时由调用方保留当前颜色。
+ *
+ * @param {File|Blob|Object|String} imageSource 本地文件、图片对象或图片 URL
+ * @returns {Promise<String>} 识别出的 #RRGGBB
+ */
+export function detectBannerGradientColor(imageSource) {
+    return new Promise(function (resolve, reject) {
+        var sourceUrl = '';
+        var shouldRevokeUrl = false;
+
+        if (imageSource instanceof Blob) {
+            sourceUrl = URL.createObjectURL(imageSource);
+            shouldRevokeUrl = true;
+        } else if (typeof imageSource === 'string') {
+            sourceUrl = imageSource;
+        } else if (imageSource) {
+            sourceUrl = imageSource.downloadUrl
+                || imageSource.url
+                || imageSource.previewUrl
+                || '';
+        }
+
+        if (!sourceUrl) {
+            reject(new Error('未找到可分析的图片地址'));
+            return;
+        }
+
+        var image = new Image();
+        if (!shouldRevokeUrl) {
+            image.crossOrigin = 'anonymous';
+        }
+
+        image.onload = function () {
+            try {
+                var canvas = document.createElement('canvas');
+                var originalWidth = image.naturalWidth || image.width;
+                var originalHeight = image.naturalHeight || image.height;
+                var width = Math.min(originalWidth, 320);
+                var height = Math.max(1, Math.round(width * originalHeight / originalWidth));
+                var context = canvas.getContext('2d', { willReadFrequently: true });
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(image, 0, 0, width, height);
+
+                var sampleStartY = Math.floor(height * BANNER_GRADIENT_SAMPLE_START_RATIO);
+                var imageData = context.getImageData(
+                    0,
+                    sampleStartY,
+                    width,
+                    Math.max(1, height - sampleStartY)
+                ).data;
+                var colorBuckets = {};
+
+                for (var index = 0; index < imageData.length; index += 16) {
+                    if (imageData[index + 3] < 128) {
+                        continue;
+                    }
+
+                    var bucketKey = [
+                        Math.floor(imageData[index] / 32),
+                        Math.floor(imageData[index + 1] / 32),
+                        Math.floor(imageData[index + 2] / 32),
+                    ].join('-');
+                    colorBuckets[bucketKey] = (colorBuckets[bucketKey] || 0) + 1;
+                }
+
+                var dominantBucket = Object.keys(colorBuckets).reduce(function (current, key) {
+                    return !current || colorBuckets[key] > colorBuckets[current]
+                        ? key
+                        : current;
+                }, '');
+
+                if (!dominantBucket) {
+                    throw new Error('未识别到有效图片颜色');
+                }
+
+                var colorParts = dominantBucket.split('-').map(Number);
+                resolve(toHexColor(
+                    (colorParts[0] * 32 + 16) * BANNER_GRADIENT_COLOR_DARKEN_RATIO,
+                    (colorParts[1] * 32 + 16) * BANNER_GRADIENT_COLOR_DARKEN_RATIO,
+                    (colorParts[2] * 32 + 16) * BANNER_GRADIENT_COLOR_DARKEN_RATIO
+                ));
+            } catch (error) {
+                reject(error);
+            } finally {
+                if (shouldRevokeUrl) {
+                    URL.revokeObjectURL(sourceUrl);
+                }
+            }
+        };
+
+        image.onerror = function () {
+            if (shouldRevokeUrl) {
+                URL.revokeObjectURL(sourceUrl);
+            }
+            reject(new Error('图片加载失败'));
+        };
+
+        image.src = sourceUrl;
+    });
+}
+
+/** 将自动识别或管理员选择的颜色同步到页面状态与只读文本组件。 */
+export function applyBannerGradientColor(color) {
+    var normalizedColor = normalizeBannerGradientColor(color);
+    var gradientColorField = this.$(BANNER_GRADIENT_COLOR_INPUT_ID);
+
+    if (!normalizedColor) {
+        return;
+    }
+
+    if (gradientColorField) {
+        gradientColorField.setValue(normalizedColor, {
+            triggerChange: false,
+        });
+    }
+
+    this.setState({ bannerGradientColor: normalizedColor });
 }
 
 /**
@@ -409,11 +606,11 @@ export async function submitEditBanner() {
     var spuSelect = this.$('selectField_mt9t5mqx');
     var imageField = this.$('imageField_mt9t5mqv');
     var numberField = this.$('numberField_mt9t5mqw');
+    var remarkField = this.$(BANNER_REMARK_INPUT_ID);
+    var gradientColorField = this.$(BANNER_GRADIENT_COLOR_INPUT_ID);
 
     if (
-        !spuSelect || typeof spuSelect.getValue !== 'function' ||
-        !imageField || typeof imageField.getValue !== 'function' ||
-        !numberField || typeof numberField.getValue !== 'function'
+        !spuSelect || !imageField || !numberField || !remarkField
     ) {
         this.utils.toast({
             title: '编辑弹窗未处于可保存状态。',
@@ -422,11 +619,20 @@ export async function submitEditBanner() {
         return;
     }
 
-    var selectedSpuFormInstId = spuSelect.get('value')
+    var selectedSpuFormInstId = getComponentValue(spuSelect)
         || this.state.editingSpuFormInstId
         || '';
-    var bannerImages = imageField.get('value') || [];
-    var sortValue = numberField.get('value');
+    var currentBannerImages = getComponentValue(imageField);
+    var hasCurrentBannerImages = Array.isArray(currentBannerImages)
+        && currentBannerImages.length;
+    var bannerImages = !isCreate && !this.state.isEditingBannerImageChanged
+        ? (this.state.editingBannerImages || [])
+        : (hasCurrentBannerImages ? currentBannerImages : []);
+    var sortValue = getComponentValue(numberField);
+    var remark = String(getComponentValue(remarkField) || '').trim();
+    var gradientColor = normalizeBannerGradientColor(
+        getComponentValue(gradientColorField)
+    ) || normalizeBannerGradientColor(this.state.bannerGradientColor);
 
     if (!isCreate && !bannerFormInstId) {
         this.utils.toast({
@@ -459,6 +665,14 @@ export async function submitEditBanner() {
     if (!selectedSpu) {
         this.utils.toast({
             title: '未找到所选 SPU，请关闭弹窗后重新打开。',
+            type: 'error',
+        });
+        return;
+    }
+
+    if (!gradientColor) {
+        this.utils.toast({
+            title: '渐变主色请输入 #RRGGBB 格式，例如 #38465A。',
             type: 'error',
         });
         return;
@@ -522,6 +736,8 @@ export async function submitEditBanner() {
     var updateFormData = {
         // SPU 业务编号既是商品跳转参数，也是删除 Banner 自动化的唯一筛选条件。
         [BANNER_SPU_ID_FIELD_ID]: selectedSpu.spuId,
+        [BANNER_FORM_REMARK_FIELD_ID]: remark,
+        [BANNER_FORM_GRADIENT_COLOR_FIELD_ID]: gradientColor,
         textField_mt806lzd: selectedSpu.productName,
         imagefield_0Qbn7EcV: JSON.stringify(normalizedBannerImages),
         numberfield_4BCfVwCO: numberSortValue,
@@ -560,6 +776,9 @@ export async function submitEditBanner() {
             bannerDialogMode: '',
             editingBannerFormInstId: '',
             editingSpuFormInstId: '',
+            editingBannerImages: [],
+            isEditingBannerImageChanged: false,
+            bannerGradientColor: DEFAULT_BANNER_GRADIENT_COLOR,
         });
 
         this.onRefreshBannerList();
@@ -599,6 +818,8 @@ export function onSelectBannerImage(files) {
         });
         return;
     }
+
+    this.setState({ isEditingBannerImageChanged: true });
 
     this.compressAndUploadImage(
         BANNER_IMAGE_FIELD_ID,
@@ -670,7 +891,23 @@ export function compressAndUploadImage(fieldId, files, maxDimension) {
                     });
                 }
 
-                uploaderRef.uploaderRef.startUpload([compressedFile]);
+                var uploadCompressedImage = function () {
+                    uploaderRef.uploaderRef.startUpload([compressedFile]);
+                };
+
+                if (fieldId !== BANNER_IMAGE_FIELD_ID) {
+                    uploadCompressedImage();
+                    return;
+                }
+
+                page.detectBannerGradientColor(compressedFile)
+                    .then(function (color) {
+                        page.applyBannerGradientColor(color);
+                    })
+                    .catch(function () {
+                        // 自动取色失败不阻塞上传；管理员可通过色板手动选择。
+                    })
+                    .then(uploadCompressedImage);
             },
             error: function (error) {
                 page.utils.toast({

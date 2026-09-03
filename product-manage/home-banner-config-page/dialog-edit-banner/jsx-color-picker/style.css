@@ -1,0 +1,23 @@
+:root .banner-color-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 32px;
+}
+
+:root .banner-color-picker-input {
+    width: 42px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid #D9E1EC;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #FFFFFF;
+}
+
+:root .banner-color-picker-value {
+    color: #5D6B7D;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1;
+}

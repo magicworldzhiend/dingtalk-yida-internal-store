@@ -196,7 +196,8 @@
 }
 
 :root .my-order-status {
-    align-self: start;
+    align-self: center;
+    margin-right: var(--my-order-status-right-space, 16px);
     font-size: 14px;
     font-weight: 500;
     white-space: nowrap;

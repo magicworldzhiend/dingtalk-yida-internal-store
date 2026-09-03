@@ -156,8 +156,9 @@ function render() {
                                                                                                   onClick={() => page.openProductDetail(goods)}>{goods.imageUrl ?
                         <img src={goods.imageUrl} alt={goods.goodsName} loading="lazy" decoding="async"/> :
                         <span class="order-detail-image-empty">商品图</span>}<span
-                        class="order-detail-goods-content"><strong>{goods.goodsName}</strong><em>{goods.goodsCategory}</em><em>{goods.specification}</em></span><span
-                        class="order-detail-goods-summary"><em>¥ {formatAmount(goods.goodsPrice)} × {goods.goodsNum || '--'}</em><strong>¥ {formatAmount(goods.goodsPrice * goods.goodsNum)}</strong></span>
+                        class="order-detail-goods-content"><strong>{goods.goodsName}</strong><em>{goods.goodsCategory}</em><em>{goods.specification}</em><em
+                        class="order-detail-goods-price-quantity">¥ {formatAmount(goods.goodsPrice)} × {goods.goodsNum || '--'}</em></span><span
+                        class="order-detail-goods-summary"><strong>¥ {formatAmount(goods.goodsPrice * goods.goodsNum)}</strong></span>
                         <svg class="order-detail-goods-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 18l6-6-6-6"></path>
