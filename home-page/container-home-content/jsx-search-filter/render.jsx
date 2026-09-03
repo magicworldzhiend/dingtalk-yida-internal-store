@@ -26,6 +26,19 @@ function render(me, state, data, ctx) {
         && pendingPaymentOrderCount > 0
         ? (pendingPaymentOrderCount > 99 ? '99+' : String(pendingPaymentOrderCount))
         : '';
+    const searchFilterElement = isMobile
+        ? document.querySelector('.home-search-filter-section')
+        : null;
+    const searchFilterRect = searchFilterElement
+        ? searchFilterElement.getBoundingClientRect()
+        : null;
+    // fixed 弹层不能继承普通文档流父元素尺寸，读取内容区实时边界后与其对齐。
+    const mobileDrawerBounds = searchFilterRect && searchFilterRect.width > 0
+        ? {
+            left: Math.round(searchFilterRect.left) + 'px',
+            width: Math.round(searchFilterRect.width) + 'px'
+        }
+        : null;
 
     const selectedParentCategory = categoryList.find(function (item) {
         return item.value === selectedParentCategoryId;
@@ -34,6 +47,15 @@ function render(me, state, data, ctx) {
     const childCategoryList = selectedParentCategory
         ? (selectedParentCategory.children || [])
         : [];
+    const isChildCategoryClosing = Boolean(pageState.filterChildCategoryClosing);
+    if (childCategoryList.length > 0) {
+        pageContext.homeFilterLastChildCategoryList = childCategoryList;
+    }
+    const displayedChildCategoryList = childCategoryList.length > 0
+        ? childCategoryList
+        : (isChildCategoryClosing
+            ? (pageContext.homeFilterLastChildCategoryList || [])
+            : []);
 
     const selectedChildCategory = childCategoryList.find(function (item) {
         return item.value === selectedCategoryId;
@@ -93,7 +115,8 @@ function render(me, state, data, ctx) {
             appliedCategoryId: '',
             productVisibleCount: 4,
             filterDrawerVisible: false,
-            activeCategoryMenu: ''
+            activeCategoryMenu: '',
+            filterChildCategoryClosing: false
         });
         resetProductListObserver();
     }
@@ -103,6 +126,7 @@ function render(me, state, data, ctx) {
         updateState({
             filterDrawerVisible: true,
             activeCategoryMenu: '',
+            filterChildCategoryClosing: false,
             selectedParentCategoryId: pageState.appliedParentCategoryId || '',
             selectedCategoryId: pageState.appliedCategoryId || ''
         });
@@ -113,6 +137,7 @@ function render(me, state, data, ctx) {
         updateState({
             filterDrawerVisible: false,
             activeCategoryMenu: '',
+            filterChildCategoryClosing: false,
             selectedParentCategoryId: '',
             selectedCategoryId: ''
         });
@@ -128,7 +153,8 @@ function render(me, state, data, ctx) {
             productVisibleCount: 4,
             activeCategoryMenu: '',
             // 重置后的交互与“确定”一致：清空条件并收起筛选抽屉。
-            filterDrawerVisible: false
+            filterDrawerVisible: false,
+            filterChildCategoryClosing: false
         });
         resetProductListObserver();
     }
@@ -142,7 +168,8 @@ function render(me, state, data, ctx) {
             activeCategoryMenu: '',
             selectedParentCategoryId: '',
             productVisibleCount: 4,
-            selectedCategoryId: ''
+            selectedCategoryId: '',
+            filterChildCategoryClosing: false
         });
         resetProductListObserver();
     }
@@ -156,10 +183,30 @@ function render(me, state, data, ctx) {
 
     /** 选择一级类目时清空已选二级类目，避免父子类目不匹配。 */
     function selectParentCategory(categoryId) {
+        const targetCategory = categoryList.find(function (item) {
+            return item.value === categoryId;
+        });
+        const targetChildCategoryList = targetCategory
+            ? (targetCategory.children || [])
+            : [];
+        const shouldAnimateChildCategoryLeave = childCategoryList.length > 0
+            && targetChildCategoryList.length === 0;
+
+        if (pageContext.homeFilterChildCategoryTimer) {
+            window.clearTimeout(pageContext.homeFilterChildCategoryTimer);
+        }
+        if (shouldAnimateChildCategoryLeave) {
+            pageContext.homeFilterLastChildCategoryList = childCategoryList;
+            pageContext.homeFilterChildCategoryTimer = window.setTimeout(function () {
+                pageContext.homeFilterChildCategoryTimer = null;
+                pageContext.setState({filterChildCategoryClosing: false});
+            }, 260);
+        }
         updateState({
             selectedParentCategoryId: categoryId,
             selectedCategoryId: '',
-            activeCategoryMenu: ''
+            activeCategoryMenu: '',
+            filterChildCategoryClosing: shouldAnimateChildCategoryLeave
         });
     }
 
@@ -516,7 +563,7 @@ function render(me, state, data, ctx) {
                 style={{
                     position: 'fixed',
                     inset: '0',
-                    zIndex: '1000',
+                    zIndex: '1002',
                     opacity: drawerVisible ? 1 : 0,
                     pointerEvents: drawerVisible ? 'auto' : 'none',
                     backgroundColor: 'rgba(0, 0, 0, 0.35)',
@@ -524,6 +571,7 @@ function render(me, state, data, ctx) {
                 }}
             >
                 <div
+                    class="home-filter-drawer"
                     onClick={(event) => {
                         event.stopPropagation();
                         updateState({
@@ -532,42 +580,38 @@ function render(me, state, data, ctx) {
                     }}
                     style={{
                         position: 'absolute',
-                        top: isMobile ? 'auto' : '0',
-                        right: '0',
-                        bottom: isMobile ? '0' : 'auto',
+                        top: isMobile ? '50%' : '0',
+                        right: isMobile ? 'auto' : '0',
+                        bottom: 'auto',
+                        left: isMobile && mobileDrawerBounds ? mobileDrawerBounds.left : 'auto',
                         display: 'flex',
                         flexDirection: 'column',
-                        width: isMobile ? '100%' : '360px',
-                        height: isMobile ? '72vh' : '100%',
+                        width: isMobile && mobileDrawerBounds
+                            ? mobileDrawerBounds.width
+                            : (isMobile ? 'calc(100% - 20px)' : '360px'),
+                        height: isMobile ? 'auto' : '100%',
+                        maxHeight: isMobile
+                            ? 'calc(100dvh - 40px)'
+                            : 'none',
                         padding: isMobile
-                            ? '16px 16px calc(16px + env(safe-area-inset-bottom))'
+                            ? '20px 16px'
                             : '24px',
                         boxSizing: 'border-box',
-                        overflowY: 'auto',
-                        borderRadius: isMobile ? '16px 16px 0 0' : '0',
+                        overflowY: isMobile ? 'visible' : 'auto',
+                        borderRadius: isMobile ? '16px' : '0',
                         backgroundColor: '#FFFFFF',
                         boxShadow: isMobile
-                            ? '0 -8px 24px rgba(31, 35, 41, 0.12)'
+                            ? '0 12px 32px rgba(31, 35, 41, 0.18)'
                             : '-8px 0 24px rgba(31, 35, 41, 0.12)',
                         transform: drawerVisible
-                            ? 'translate(0, 0)'
-                            : (isMobile ? 'translateY(100%)' : 'translateX(100%)'),
-                        transition: 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+                            ? (isMobile ? 'translateY(-50%) scale(1)' : 'translateX(0)')
+                            : (isMobile
+                                ? 'translateY(-46%) scale(0.96)'
+                                : 'translateX(100%)'),
+                        transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
                         willChange: 'transform'
                     }}
                 >
-                    {isMobile && (
-                        <div
-                            aria-hidden="true"
-                            style={{
-                                width: '32px',
-                                height: '4px',
-                                margin: '0 auto 16px',
-                                borderRadius: '999px',
-                                backgroundColor: '#D9DDE3'
-                            }}
-                        />
-                    )}
                     <div
                         style={{
                             display: 'flex',
@@ -577,6 +621,7 @@ function render(me, state, data, ctx) {
                         }}
                     >
             <span
+                class="home-filter-drawer-title"
                 style={{
                     color: '#1F2329',
                     fontSize: '18px',
@@ -602,6 +647,7 @@ function render(me, state, data, ctx) {
 
                     <div style={{ marginBottom: '20px' }}>
                         <div
+                            class="home-filter-category-label"
                             style={{
                                 marginBottom: '8px',
                                 color: '#1F2329',
@@ -622,9 +668,14 @@ function render(me, state, data, ctx) {
                         )}
                     </div>
 
-                    {childCategoryList.length > 0 && (
-                        <div style={{ marginBottom: '20px' }}>
-                            <div
+                    {displayedChildCategoryList.length > 0 && (
+                        <div
+                            class={isChildCategoryClosing
+                                ? 'home-filter-child-category home-filter-child-category-leaving'
+                                : 'home-filter-child-category'}
+                        >
+                        <div
+                            class="home-filter-category-label"
                                 style={{
                                     marginBottom: '8px',
                                     color: '#1F2329',
@@ -637,7 +688,7 @@ function render(me, state, data, ctx) {
 
                             {renderCategoryDropdown(
                                 'child',
-                                childCategoryList,
+                                displayedChildCategoryList,
                                 selectedCategoryId,
                                 selectedChildCategoryLabel,
                                 '全部二级类目',
@@ -650,7 +701,8 @@ function render(me, state, data, ctx) {
                         style={{
                             display: 'flex',
                             gap: '12px',
-                            marginTop: 'auto'
+                            marginTop: '24px',
+                            flexShrink: '0'
                         }}
                     >
                         <button
