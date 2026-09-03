@@ -4,6 +4,7 @@ const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
 const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
 const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const ORDER_DETAIL_JSX_ID = 'jsx_mt0wteuu';
+const SKU_FORM_UUID = 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK';
 
 /** 将宜搭图片字段转换为可展示的图片地址。 */
 function resolveImageUrl(value) {
@@ -32,6 +33,70 @@ function refreshOrderDetailJsx(page) {
     const component = page.$(ORDER_DETAIL_JSX_ID);
     if (component) {
         component.forceUpdate();
+    }
+}
+
+/**
+ * 释放一条订单商品明细占用的锁定库存。
+ *
+ * 当前可用库存是宜搭公式字段，保存锁定库存后会按“总库存 - 锁定库存”自动计算，
+ * 因而不可直接写入。
+ *
+ * @param {Object} page 页面上下文
+ * @param {Object} goods 订单商品明细
+ * @returns {Promise<void>} 库存释放完成结果
+ */
+async function releaseGoodsSkuStock(page, goods) {
+    const spuId = String(goods && goods.goodsSpuId || '').trim();
+    const skuId = String(goods && goods.goodsId || '').trim();
+    const quantity = Number(goods && goods.goodsNum || 0);
+    if (!spuId || !skuId || !Number.isFinite(quantity) || quantity <= 0) {
+        throw new Error('订单商品规格或购买数量异常，无法释放库存');
+    }
+
+    const response = await page.dataSourceMap.getGoodsSkuListBySpu.load({
+        formUuid: SKU_FORM_UUID,
+        currentPage: 1,
+        pageSize: 1,
+        searchFieldJson: JSON.stringify({textField_mt17nqjb: spuId}),
+    });
+    const skuRecord = response && response.data && response.data[0];
+    const skuRows = skuRecord && skuRecord.formData && skuRecord.formData.tableField_msygk2pq;
+    const skuIndex = Array.isArray(skuRows)
+        ? skuRows.findIndex((row) => String(row.textField_mt9jn5sc || '') === skuId)
+        : -1;
+    if (!skuRecord || !skuRecord.formInstId || skuIndex < 0) {
+        throw new Error('未找到订单对应的商品规格，库存未释放');
+    }
+
+    const lockedStock = Number(skuRows[skuIndex].numberField_msymrpxd || 0);
+    if (!Number.isFinite(lockedStock) || lockedStock < quantity) {
+        throw new Error('锁定库存不足，库存未释放');
+    }
+    const updatedSkuRows = skuRows.map((row, index) => index === skuIndex
+        ? Object.assign({}, row, {numberField_msymrpxd: lockedStock - quantity})
+        : row
+    );
+    await page.dataSourceMap.updateSkuStock.load({
+        formInstId: skuRecord.formInstId,
+        updateFormDataJson: JSON.stringify({tableField_msygk2pq: updatedSkuRows}),
+    });
+}
+
+/**
+ * 依次释放当前订单所有商品明细的锁定库存。
+ *
+ * @param {Object} page 页面上下文
+ * @param {Array} goodsList 订单商品明细
+ * @returns {Promise<void>} 全部库存释放完成结果
+ */
+async function releaseOrderGoodsStock(page, goodsList) {
+    const validGoodsList = Array.isArray(goodsList) ? goodsList : [];
+    if (validGoodsList.length === 0) {
+        throw new Error('订单没有可释放库存的商品明细');
+    }
+    for (const goods of validGoodsList) {
+        await releaseGoodsSkuStock(page, goods);
     }
 }
 
@@ -254,7 +319,7 @@ export function closeCancelOrderDialog() {
     refreshOrderDetailJsx(this);
 }
 
-/** 取消当前待支付订单；库存释放仍由既有业务规则负责。 */
+/** 取消当前待支付订单，并在库存释放成功后完成订单关闭。 */
 export async function cancelPendingOrder() {
     const order = this.state.order || {};
     if (order.status !== '待支付' || !order.formInstId) {
@@ -274,9 +339,16 @@ export async function cancelPendingOrder() {
                 radioField_mt9fft19: '否'
             })
         });
+        await releaseOrderGoodsStock(this, this.state.goodsList);
+        await this.dataSourceMap.updateOrderOnCancel.load({
+            formInstId: order.formInstId,
+            updateFormDataJson: JSON.stringify({
+                radioField_mt8fx6mi: '关闭（已释放库存）'
+            })
+        });
         this.setState({
             remainingPaymentMilliseconds: 0, isCancelDialogVisible: false,
-            order: Object.assign({}, order, {status: '已关闭', closeStatus: '关闭（未释放库存）', closeTime: closeTime, isTimeoutClosed: false})
+            order: Object.assign({}, order, {status: '已关闭', closeStatus: '关闭（已释放库存）', closeTime: closeTime, isTimeoutClosed: false})
         });
         this.utils.toast({title: '订单已取消', type: 'success'});
         this.utils.router.replace(MY_ORDER_PAGE_ID);

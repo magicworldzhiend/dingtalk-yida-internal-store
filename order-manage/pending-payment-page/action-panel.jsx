@@ -2,6 +2,7 @@ const DEFAULT_DEBUG_ORDER_ID = '17920260831135120';
 const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
 const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
+const SKU_FORM_UUID = 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK';
 
 /**
  * 从当前页面地址读取订单业务主键。
@@ -85,6 +86,7 @@ function buildPendingPaymentData(orderResponse, orderDetailResponse) {
         },
         orderDetail: {
             spuId: orderDetailFormData.textField_mt9xddqu || '',
+            skuId: orderDetailFormData.textField_mt9i74jf || '',
             imageUrl: resolveImageUrl(orderDetailFormData.imageField_mtglpdws),
             productName: orderDetailFormData.textField_mt9i74jg || '',
             specification: orderDetailFormData.textField_mt9i74jk || '',
@@ -131,6 +133,56 @@ function refreshPendingPaymentJsx(page) {
     if (jsxComponent) {
         jsxComponent.forceUpdate();
     }
+}
+
+/**
+ * 释放订单商品的锁定库存。
+ *
+ * 当前可用库存为“总库存 - 锁定库存”的公式字段，只更新锁定库存，
+ * 由宜搭在保存 SKU 明细后自动重算可用库存。
+ *
+ * @param {Object} page 页面上下文
+ * @param {Object} orderDetail 订单商品明细
+ * @returns {Promise<void>} 库存释放完成结果
+ */
+async function releaseOrderSkuStock(page, orderDetail) {
+    const spuId = String(orderDetail && orderDetail.spuId || '').trim();
+    const skuId = String(orderDetail && orderDetail.skuId || '').trim();
+    const quantity = Number(orderDetail && orderDetail.quantity || 0);
+
+    if (!spuId || !skuId || !Number.isFinite(quantity) || quantity <= 0) {
+        throw new Error('订单商品规格或购买数量异常，无法释放库存');
+    }
+
+    const response = await page.dataSourceMap.getGoodsSkuListBySpu.load({
+        formUuid: SKU_FORM_UUID,
+        currentPage: 1,
+        pageSize: 1,
+        searchFieldJson: JSON.stringify({textField_mt17nqjb: spuId}),
+    });
+    const skuRecord = response && response.data && response.data[0];
+    const skuRows = skuRecord && skuRecord.formData && skuRecord.formData.tableField_msygk2pq;
+    const skuIndex = Array.isArray(skuRows)
+        ? skuRows.findIndex((row) => String(row.textField_mt9jn5sc || '') === skuId)
+        : -1;
+
+    if (!skuRecord || !skuRecord.formInstId || skuIndex < 0) {
+        throw new Error('未找到订单对应的商品规格，库存未释放');
+    }
+
+    const lockedStock = Number(skuRows[skuIndex].numberField_msymrpxd || 0);
+    if (!Number.isFinite(lockedStock) || lockedStock < quantity) {
+        throw new Error('锁定库存不足，库存未释放');
+    }
+
+    const updatedSkuRows = skuRows.map((row, index) => index === skuIndex
+        ? Object.assign({}, row, {numberField_msymrpxd: lockedStock - quantity})
+        : row
+    );
+    await page.dataSourceMap.updateSkuStock.load({
+        formInstId: skuRecord.formInstId,
+        updateFormDataJson: JSON.stringify({tableField_msygk2pq: updatedSkuRows}),
+    });
 }
 
 /** 获取待支付页实际内容 Container 的滚动根。 */
@@ -418,7 +470,7 @@ export async function onConfirmPayment() {
 /**
  * 取消待支付订单。
  *
- * 订单关闭状态为只读字段，由既有函数回填；页面只负责关闭订单主状态。
+ * 先写入未释放库存的关闭中间态，库存释放成功后再完成关闭状态。
  */
 export async function onCancelOrder() {
     const order = this.state.order || {};
@@ -443,13 +495,22 @@ export async function onCancelOrder() {
             }),
         });
 
+        await releaseOrderSkuStock(this, this.state.orderDetail);
+
+        await this.dataSourceMap.updateOrderOnCancel.load({
+            formInstId: order.formInstId,
+            updateFormDataJson: JSON.stringify({
+                radioField_mt8fx6mi: '关闭（已释放库存）',
+            }),
+        });
+
         this.setState({
             pageStatus: 'closed',
             remainingMilliseconds: 0,
             isCancelDialogVisible: false,
             order: Object.assign({}, order, {
                 status: '已关闭',
-                closeStatus: '关闭（未释放库存）',
+                closeStatus: '关闭（已释放库存）',
             }),
         });
         refreshPendingPaymentJsx(this);

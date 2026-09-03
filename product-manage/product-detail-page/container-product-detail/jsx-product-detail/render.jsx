@@ -131,6 +131,17 @@ function render() {
     };
 
     const onBuy = async () => {
+        /**
+         * 库存被其他页面抢先锁定后，提示用户并重新读取商品详情的最新库存。
+         */
+        const notifySoldOutAndReload = () => {
+            this.utils.toast({
+                title: '订单创建失败，已经卖光了~',
+                type: 'warning',
+            });
+            window.setTimeout(() => window.location.reload(), 500);
+        };
+
         if (isCreatingOrder) {
             return;
         }
@@ -190,7 +201,8 @@ function render() {
             const latestLockedStock = Number(latestSkuRow.numberField_msymrpxd || 0);
             const latestUnitPrice = Number(latestSkuRow.numberField_msymrpxb);
             if (!Number.isFinite(latestAvailableStock) || latestAvailableStock < buyNum) {
-                throw new Error('当前 SKU 库存不足，请刷新后重新选择');
+                notifySoldOutAndReload();
+                return;
             }
             if (!Number.isFinite(latestLockedStock) || !Number.isFinite(latestUnitPrice)) {
                 throw new Error('当前 SKU 的库存或价格数据异常');
