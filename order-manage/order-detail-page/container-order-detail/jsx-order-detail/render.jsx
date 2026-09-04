@@ -121,7 +121,7 @@ function render() {
                         <dd class="order-detail-order-no">{order.orderNo || '--'}</dd>
                     </div>
                     <div>
-                        <dt>商品金额</dt>
+                        <dt>订单金额</dt>
                         <dd class="order-detail-amount">¥ {formatAmount(order.payableAmount)}</dd>
                     </div>
                     <div>
@@ -145,6 +145,15 @@ function render() {
                         <dd>{order.remark || '无'}</dd>
                     </div>
                 </dl>
+                <section class="order-detail-time-section" aria-label="订单时间">
+                    <h3>订单时间</h3>
+                    <div class="order-detail-time-grid">
+                        <div><span>订单创建时间</span><strong>{page.formatOrderDetailDateTime(order.createTime)}</strong></div>
+                        <div><span>订单支付时间</span><strong>{page.formatOrderDetailDateTime(order.paymentTime)}</strong></div>
+                        <div><span>订单领取时间</span><strong>{order.status === '已完成' ? page.formatOrderDetailDateTime(order.closeTime) : '--'}</strong></div>
+                        <div><span>订单关闭时间</span><strong>{order.status === '已关闭' ? page.formatOrderDetailDateTime(order.closeTime) : '--'}</strong></div>
+                    </div>
+                </section>
             </section>
             <section class="order-detail-card order-detail-goods-card">
                 <div class="order-detail-section-heading"><h2>商品快照</h2>

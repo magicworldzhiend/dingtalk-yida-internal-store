@@ -207,6 +207,47 @@
     word-break: break-word;
 }
 
+:root .order-detail-time-section {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #EEF0F3;
+}
+
+:root .order-detail-time-section h3 {
+    margin: 0 0 12px;
+    color: #8F959E;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+:root .order-detail-time-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+}
+
+:root .order-detail-time-grid > div {
+    display: grid;
+    gap: 6px;
+    padding: 11px 14px;
+    border: 1px solid #EEF0F3;
+    border-radius: 8px;
+    background: #F8FAFC;
+}
+
+:root .order-detail-time-grid span {
+    color: #8F959E;
+    font-size: 12px;
+}
+
+:root .order-detail-time-grid strong {
+    color: #3C4149;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
 :root .order-detail-order-no {
     color: #1677FF !important;
 }
@@ -875,6 +916,24 @@
 
     :root .order-detail-meta-grid .order-detail-meta-full {
         grid-column: auto;
+    }
+
+    :root .order-detail-time-section {
+        margin-top: 16px;
+        padding-top: 14px;
+    }
+
+    :root .order-detail-time-grid {
+        gap: 8px;
+    }
+
+    :root .order-detail-time-grid > div {
+        gap: 4px;
+        padding: 10px;
+    }
+
+    :root .order-detail-time-grid strong {
+        font-size: 13px;
     }
 
     :root .order-detail-goods-list {
