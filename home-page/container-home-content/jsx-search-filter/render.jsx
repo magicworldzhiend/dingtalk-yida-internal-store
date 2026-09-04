@@ -26,9 +26,7 @@ function render(me, state, data, ctx) {
         && pendingPaymentOrderCount > 0
         ? (pendingPaymentOrderCount > 99 ? '99+' : String(pendingPaymentOrderCount))
         : '';
-    const searchFilterElement = isMobile
-        ? document.querySelector('.home-search-filter-section')
-        : null;
+    const searchFilterElement = document.querySelector('.home-search-filter-section');
     const searchFilterRect = searchFilterElement
         ? searchFilterElement.getBoundingClientRect()
         : null;
@@ -39,6 +37,10 @@ function render(me, state, data, ctx) {
             width: Math.round(searchFilterRect.width) + 'px'
         }
         : null;
+    // PC 页面存在侧边栏，弹层应相对首页内容区居中而非相对整个浏览器视口居中。
+    const desktopDrawerLeft = searchFilterRect && searchFilterRect.width > 0
+        ? Math.round(searchFilterRect.left + searchFilterRect.width / 2) + 'px'
+        : '50%';
 
     const selectedParentCategory = categoryList.find(function (item) {
         return item.value === selectedParentCategoryId;
@@ -276,14 +278,30 @@ function render(me, state, data, ctx) {
                     <span>{selectedLabel}</span>
                     <span
                         style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '18px',
+                            height: '18px',
                             color: '#8F959E',
-                            fontSize: '16px',
-                            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transform: expanded ? 'rotate(-90deg)' : 'rotate(0deg)',
                             transition: 'transform 180ms ease-in-out'
                         }}
                     >
-            ⌄
-          </span>
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M15 18l-6-6 6-6"></path>
+                        </svg>
+                    </span>
                 </button>
 
                 <div
@@ -580,36 +598,34 @@ function render(me, state, data, ctx) {
                     }}
                     style={{
                         position: 'absolute',
-                        top: isMobile ? '50%' : '0',
-                        right: isMobile ? 'auto' : '0',
+                        top: '50%',
+                        right: 'auto',
                         bottom: 'auto',
-                        left: isMobile && mobileDrawerBounds ? mobileDrawerBounds.left : 'auto',
+                        left: isMobile && mobileDrawerBounds
+                            ? mobileDrawerBounds.left
+                            : desktopDrawerLeft,
                         display: 'flex',
                         flexDirection: 'column',
                         width: isMobile && mobileDrawerBounds
                             ? mobileDrawerBounds.width
                             : (isMobile ? 'calc(100% - 20px)' : '360px'),
-                        height: isMobile ? 'auto' : '100%',
-                        maxHeight: isMobile
-                            ? 'calc(100dvh - 40px)'
-                            : 'none',
-                        padding: isMobile
-                            ? '20px 16px'
-                            : '24px',
+                        height: 'auto',
+                        maxHeight: 'calc(100dvh - 40px)',
+                        padding: '20px 16px',
                         boxSizing: 'border-box',
-                        overflowY: isMobile ? 'visible' : 'auto',
-                        borderRadius: isMobile ? '16px' : '0',
+                        overflowY: 'visible',
+                        borderRadius: '16px',
                         backgroundColor: '#FFFFFF',
-                        boxShadow: isMobile
-                            ? '0 12px 32px rgba(31, 35, 41, 0.18)'
-                            : '-8px 0 24px rgba(31, 35, 41, 0.12)',
+                        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
+                        WebkitFontSmoothing: 'antialiased',
+                        MozOsxFontSmoothing: 'grayscale',
+                        boxShadow: '0 12px 32px rgba(31, 35, 41, 0.18)',
                         transform: drawerVisible
-                            ? (isMobile ? 'translateY(-50%) scale(1)' : 'translateX(0)')
+                            ? (isMobile ? 'translateY(-50%) scale(1)' : 'translate(-50%, -50%) scale(1)')
                             : (isMobile
                                 ? 'translateY(-46%) scale(0.96)'
-                                : 'translateX(100%)'),
-                        transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
-                        willChange: 'transform'
+                                : 'translate(-50%, -46%) scale(0.96)'),
+                        transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
                     }}
                 >
                     <div
