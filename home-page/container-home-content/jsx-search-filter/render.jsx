@@ -305,6 +305,7 @@ function render(me, state, data, ctx) {
                 </button>
 
                 <div
+                    class="home-category-dropdown-options"
                     style={{
                         position: 'absolute',
                         top: 'calc(100% + 6px)',

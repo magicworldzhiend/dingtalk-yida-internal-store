@@ -17,9 +17,35 @@ export function initHomeWheelScroll() {
     // 页面重新挂载时先移除旧监听，避免同一次滚轮事件被重复转交导致滚动速度异常。
     if (page.homeWheelScrollHandler) {
         document.removeEventListener('wheel', page.homeWheelScrollHandler, true);
+        window.removeEventListener('wheel', page.homeWheelScrollHandler, true);
+    }
+    if (window.homeWheelScrollHandler) {
+        window.removeEventListener('wheel', window.homeWheelScrollHandler, true);
     }
 
     page.homeWheelScrollHandler = (event) => {
+        const categoryOptionList = event.target && event.target.closest
+            ? event.target.closest('.home-category-dropdown-options')
+            : null;
+        if (categoryOptionList) {
+            // 首页使用捕获阶段统一处理滚轮，需优先将滚动量交给已展开的类目选项列表。
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            categoryOptionList.scrollBy({
+                top: event.deltaY,
+                left: event.deltaX,
+                behavior: 'auto'
+            });
+            return;
+        }
+
+        if (page.state && page.state.filterDrawerVisible) {
+            // 筛选弹窗打开后锁定背景页面，避免在弹窗任意空白区域滚动时带动首页内容。
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+        }
+
         const contentScrollElement = findHomeContentScrollElement(
             document.querySelector('.home-banner-section')
         );
@@ -29,13 +55,15 @@ export function initHomeWheelScroll() {
         }
 
         event.preventDefault();
+        event.stopImmediatePropagation();
         contentScrollElement.scrollBy({
             top: event.deltaY,
             left: event.deltaX,
             behavior: 'auto'
         });
     };
-    document.addEventListener('wheel', page.homeWheelScrollHandler, {capture: true, passive: false});
+    window.homeWheelScrollHandler = page.homeWheelScrollHandler;
+    window.addEventListener('wheel', page.homeWheelScrollHandler, {capture: true, passive: false});
 }
 
 /** 查找包含指定节点的首页内容滚动容器。 */
@@ -612,6 +640,10 @@ export function initHomeProductLoadMore() {
 export function didUnmount() {
     if (this.homeWheelScrollHandler) {
         document.removeEventListener('wheel', this.homeWheelScrollHandler, true);
+        window.removeEventListener('wheel', this.homeWheelScrollHandler, true);
+        if (window.homeWheelScrollHandler === this.homeWheelScrollHandler) {
+            window.homeWheelScrollHandler = null;
+        }
         this.homeWheelScrollHandler = null;
     }
 
