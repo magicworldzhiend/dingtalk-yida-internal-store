@@ -76,6 +76,18 @@ async function getGoodsBySpu(spu, instance) {
 }
 
 /**
+ * 查询商品当前上下架状态，供创建订单前校验页面停留期间发生的状态变更。
+ *
+ * @param {string} spuNo 商品 SPU 编号
+ * @returns {Promise<string>} 当前上下架状态；商品不存在时返回空字符串
+ */
+export async function loadLatestProductShelfStatus(spuNo) {
+    const product = await getGoodsBySpu(spuNo, this);
+
+    return product ? product.shelfStatus : '';
+}
+
+/**
  * 根据SPU获取SKU列表
  */
 async function getGoodsSkuListBySpu(spu, instance) {

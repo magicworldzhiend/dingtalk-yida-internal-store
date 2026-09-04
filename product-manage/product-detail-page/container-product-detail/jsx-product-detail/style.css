@@ -244,11 +244,19 @@
     color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-:root .product-detail-option:hover {
+:root .product-detail-option:not(:disabled):hover {
     border-color: #1677FF;
     background: #F0F7FF;
     color: #1677FF;
     transform: translateY(-1px);
+}
+
+:root .product-detail-option:disabled,
+:root .product-detail-option-disabled {
+    border-color: #EEF0F3;
+    background: #F7F8FA;
+    color: #C9CDD4;
+    cursor: not-allowed;
 }
 
 :root .product-detail-option-active {

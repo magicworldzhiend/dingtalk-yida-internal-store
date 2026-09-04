@@ -29,15 +29,42 @@ function render() {
             : '--';
     };
 
-    const getMatchedSkuList = () => {
-        return attrValueList.filter((sku) => {
-            const selectedValueList = Object.values(selectedMap);
-            const skuValueList = String(sku.attrText || '').split(' / ');
+    /** 判断 SKU 是否匹配当前已选择的规格值。 */
+    const isSkuMatched = (sku, valueMap, maxAttrIndex) => {
+        const skuValueList = String(sku.attrText || '').split(' / ');
 
-            return selectedValueList.every((value) => (
-                skuValueList.indexOf(value) !== -1
-            ));
+        return attrList.every((attrItem, attrIndex) => {
+            if (attrIndex >= maxAttrIndex) {
+                return true;
+            }
+
+            const selectedValue = valueMap[attrItem.attr || ''];
+
+            return !selectedValue || skuValueList[attrIndex] === selectedValue;
         });
+    };
+
+    /** 获取匹配全部已选规格的 SKU 列表。 */
+    const getMatchedSkuList = () => attrValueList.filter((sku) => (
+        isSkuMatched(sku, selectedMap, attrList.length)
+    ));
+
+    /** 判断当前属性值在已选上游属性下是否存在可用的 SKU 组合。 */
+    const isAttributeValueAvailable = (attrIndex, attrName, value) => {
+        const upstreamSelectedMap = {};
+
+        attrList.slice(0, attrIndex).forEach((attrItem) => {
+            const upstreamAttrName = attrItem.attr || '';
+
+            if (selectedMap[upstreamAttrName]) {
+                upstreamSelectedMap[upstreamAttrName] = selectedMap[upstreamAttrName];
+            }
+        });
+        upstreamSelectedMap[attrName] = value;
+
+        return attrValueList.some((sku) => (
+            isSkuMatched(sku, upstreamSelectedMap, attrIndex + 1)
+        ));
     };
 
     const matchedSkuList = getMatchedSkuList();
@@ -69,11 +96,23 @@ function render() {
     };
 
     const selectAttr = (attrName, value) => {
+        const selectedAttrIndex = attrList.findIndex((attrItem) => (
+            attrItem.attr === attrName
+        ));
+        const nextSelectedMap = {};
+
+        // 切换上游属性时清空后续选择，避免保留已经不存在的 SKU 组合。
+        attrList.slice(0, selectedAttrIndex).forEach((attrItem) => {
+            const upstreamAttrName = attrItem.attr || '';
+
+            if (selectedMap[upstreamAttrName]) {
+                nextSelectedMap[upstreamAttrName] = selectedMap[upstreamAttrName];
+            }
+        });
+        nextSelectedMap[attrName] = value;
         this.setState({
             product: Object.assign({}, product, {
-                selectedMap: Object.assign({}, selectedMap, {
-                    [attrName]: value,
-                }),
+                selectedMap: nextSelectedMap,
             }),
         });
         refreshJsx();
@@ -116,13 +155,17 @@ function render() {
                     <div class="product-detail-attribute-values">
                         {valueList.map((value) => {
                             const active = selectedMap[attrName] === value;
+                            const available = isAttributeValueAvailable(index, attrName, value);
 
                             return (
                                 <button
                                     key={value}
-                                    class={active
+                                    class={!available
+                                        ? 'product-detail-option product-detail-option-disabled'
+                                        : (active
                                         ? 'product-detail-option product-detail-option-active'
-                                        : 'product-detail-option'}
+                                        : 'product-detail-option')}
+                                    disabled={!available}
                                     onClick={() => selectAttr(attrName, value)}
                                 >
                                     {value}
@@ -177,6 +220,14 @@ function render() {
         refreshJsx();
         let createdOrderId = '';
         try {
+            // 页面停留期间商品可能被管理员下架，下单前必须以最新 SPU 状态为准。
+            const latestShelfStatus = await this.loadLatestProductShelfStatus(product.spuNo);
+            if (latestShelfStatus !== '上架') {
+                this.utils.toast({ title: '该商品已下架', type: 'warning' });
+                window.setTimeout(() => window.location.reload(), 500);
+                return;
+            }
+
             const latestSkuResponse = await this.dataSourceMap.getGoodsSkuListBySpu.load({
                 formUuid: 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK',
                 currentPage: 1,
@@ -199,7 +250,9 @@ function render() {
                 : null;
 
             if (!latestSkuRecord || !latestSkuRow) {
-                throw new Error('未查询到当前 SKU，请刷新商品详情后重试');
+                this.utils.toast({ title: '当前商品规格已删除', type: 'warning' });
+                window.setTimeout(() => window.location.reload(), 500);
+                return;
             }
 
             const latestAvailableStock = Number(latestSkuRow.numberField_msymrpxc);
