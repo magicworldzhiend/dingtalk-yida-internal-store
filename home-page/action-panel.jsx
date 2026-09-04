@@ -14,6 +14,11 @@ export function didMount() {
 export function initHomeWheelScroll() {
     const page = this;
 
+    // 页面重新挂载时先移除旧监听，避免同一次滚轮事件被重复转交导致滚动速度异常。
+    if (page.homeWheelScrollHandler) {
+        document.removeEventListener('wheel', page.homeWheelScrollHandler, true);
+    }
+
     page.homeWheelScrollHandler = (event) => {
         const contentScrollElement = findHomeContentScrollElement(
             document.querySelector('.home-banner-section')
@@ -607,6 +612,7 @@ export function initHomeProductLoadMore() {
 export function didUnmount() {
     if (this.homeWheelScrollHandler) {
         document.removeEventListener('wheel', this.homeWheelScrollHandler, true);
+        this.homeWheelScrollHandler = null;
     }
 
     if (this.__homeProductObserver) {
