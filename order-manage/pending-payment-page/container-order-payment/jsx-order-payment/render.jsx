@@ -241,19 +241,6 @@ function render() {
                 </div>
             </section>
 
-            <section class="pending-payment-card pending-payment-sku-preview-card">
-                <div class="pending-payment-section-heading">
-                    <h2>规格确认</h2>
-                </div>
-                <div class="pending-payment-sku-preview">
-                    {imageUrl ? (
-                        <img src={imageUrl} alt={productName} decoding="async" />
-                    ) : (
-                        <div class="pending-payment-sku-preview-empty">暂无 SKU 图片</div>
-                    )}
-                </div>
-            </section>
-
             <section class="pending-payment-card pending-payment-method-card">
                 <h2>支付方式</h2>
                 <div class="pending-payment-method-list">

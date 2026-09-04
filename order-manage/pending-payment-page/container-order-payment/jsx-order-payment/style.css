@@ -165,31 +165,6 @@
     font-size: 13px;
 }
 
-.pending-payment-sku-preview {
-    width: 100%;
-    aspect-ratio: 3 / 2;
-    overflow: hidden;
-    border: 1px solid #eef0f3;
-    border-radius: 10px;
-    background: #f5f6f8;
-}
-
-.pending-payment-sku-preview img,
-.pending-payment-sku-preview-empty {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    align-items: center;
-    justify-content: center;
-    object-fit: cover;
-    object-position: center;
-}
-
-.pending-payment-sku-preview-empty {
-    color: #8f959e;
-    font-size: 14px;
-}
-
 .pending-payment-method-card,
 .pending-payment-meta-card {
     display: grid;
@@ -533,10 +508,6 @@
         flex-basis: 88px;
         width: 88px;
         height: 88px;
-    }
-
-    .pending-payment-sku-preview {
-        border-radius: 8px;
     }
 
     .pending-payment-product-detail {
