@@ -131,7 +131,7 @@ function render() {
                                         onClick={() => page.openMyOrderDetail(order)}>
                                     <strong>{order.productName}</strong>
                                     <span>{order.specification}</span>
-                                    <em>× {order.quantity || '--'}</em>
+                                    <em>¥{formatAmount(order.unitPrice)} × {order.quantity || '--'}</em>
                                 </button>
                                 <span class={getStatusClass(order.status)}>{order.status || '--'}</span>
                             </div>

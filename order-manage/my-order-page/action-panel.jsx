@@ -36,6 +36,7 @@ async function loadOrderDetail(page, orderId) {
     return {
         productName: data.textField_mt9i74jg || '商品信息缺失',
         specification: data.textField_mt9i74jk || '--',
+        unitPrice: Number(data.numberField_mt9i74jj || 0),
         quantity: Number(data.numberField_mt9i74jl || 0),
         imageUrl: resolveImageUrl(data.imageField_mtglpdws)
     };
@@ -49,7 +50,7 @@ async function buildOrder(page, record) {
     try {
         detail = orderId ? await loadOrderDetail(page, orderId) : {};
     } catch (error) {
-        detail = {productName: '商品信息加载失败', specification: '--', quantity: 0, imageUrl: ''};
+        detail = {productName: '商品信息加载失败', specification: '--', unitPrice: 0, quantity: 0, imageUrl: ''};
     }
     return {
         formInstId: record.formInstId || '',
@@ -60,6 +61,7 @@ async function buildOrder(page, record) {
         createTime: data.dateField_mt6szq75 || record.gmtCreate || '',
         productName: detail.productName || '商品信息缺失',
         specification: detail.specification || '--',
+        unitPrice: detail.unitPrice || 0,
         quantity: detail.quantity || 0,
         imageUrl: detail.imageUrl || ''
     };
