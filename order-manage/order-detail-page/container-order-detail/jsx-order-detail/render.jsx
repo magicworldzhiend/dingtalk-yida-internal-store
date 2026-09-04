@@ -35,34 +35,29 @@ function render() {
     function getTimeline() {
         if (order.status === '待支付') {
             return [
-                {title: '待支付', time: order.createTime, state: 'current'},
-                {title: '待领用', state: 'upcoming'},
+                {title: '订单提交', time: order.createTime, state: 'complete'},
+                {title: '待支付', state: 'current'},
                 {title: '已完成', state: 'upcoming'}
             ];
         }
-        // 支付前关闭时，第二节点替换为关闭结果；“已完成”仍保留为未到达的灰色节点。
+        // 支付前关闭时，保留“待支付”节点以反映订单未完成付款。
         if (order.status === '已关闭' && (order.isTimeoutClosed || !order.paymentTime)) {
             return [
-                {title: '待支付', time: order.createTime, state: 'complete', lineTone: 'closing'},
-                {
-                    title: order.isTimeoutClosed ? '已超时关闭' : '已关闭',
-                    time: order.closeTime,
-                    state: 'current',
-                    tone: 'closed'
-                },
-                {title: '已完成', state: 'upcoming'}
+                {title: '订单提交', time: order.createTime, state: 'complete'},
+                {title: '待支付', state: 'complete', lineTone: 'closing'},
+                {title: order.isTimeoutClosed ? '已超时关闭' : '已关闭', time: order.closeTime, state: 'current', tone: 'closed'}
             ];
         }
         if (order.status === '已关闭') {
             return [
-                {title: '待支付', time: order.createTime, state: 'complete'},
-                {title: '待领用', time: order.paymentTime, state: 'complete', lineTone: 'closing'},
+                {title: '订单提交', time: order.createTime, state: 'complete'},
+                {title: '已支付', time: order.paymentTime, state: 'complete', lineTone: 'closing'},
                 {title: '已关闭', time: order.closeTime, state: 'current', tone: 'closed'}
             ];
         }
         return [
-            {title: '待支付', time: order.createTime, state: 'complete'},
-            {title: '待领用', time: order.paymentTime, state: order.status === '待领用' ? 'current' : 'complete'},
+            {title: '订单提交', time: order.createTime, state: 'complete'},
+            {title: '已支付', time: order.paymentTime, state: order.status === '待领用' ? 'current' : 'complete'},
             {
                 title: '已完成',
                 time: order.closeTime,
@@ -111,6 +106,9 @@ function render() {
                 {order.status === '待支付' && <div class="order-detail-countdown">
                     <span>剩余支付时间</span><strong>{formatCountdown(state.remainingPaymentMilliseconds)}</strong>
                     <em>超时后订单将自动关闭</em>
+                </div>}
+                {order.status === '待领用' && <div class="order-detail-collection-notice">
+                    <strong>订单已支付</strong><span>请前往管理员处领取商品</span>
                 </div>}
             </section>
             <section class="order-detail-card">
