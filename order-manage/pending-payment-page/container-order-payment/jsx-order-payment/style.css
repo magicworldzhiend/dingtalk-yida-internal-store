@@ -427,21 +427,10 @@
     color: #8f959e;
 }
 
-.pending-payment-remark-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
+.pending-payment-remark-limit {
     color: #8f959e;
     font-size: 12px;
-}
-
-.pending-payment-remark-footer strong {
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.pending-payment-remark-footer .pending-payment-remark-count-exceeded {
-    color: #e5484d;
+    text-align: right;
 }
 
 .pending-payment-dialog h2,

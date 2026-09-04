@@ -344,6 +344,13 @@ async function loadRawOrderData(page, orderId) {
         isCancelDialogVisible: false,
         isCancellingOrder: false,
     });
+    page.pendingPaymentRemarkDraft = pendingPaymentData.order.remark;
+    window.requestAnimationFrame(() => {
+        const remarkInput = document.querySelector('#pending-payment-remark-input');
+        if (remarkInput) {
+            remarkInput.value = page.pendingPaymentRemarkDraft;
+        }
+    });
     refreshPaymentCountdown(page, pendingPaymentData.order.timeoutCloseTime);
 }
 
@@ -357,6 +364,7 @@ async function loadRawOrderData(page, orderId) {
 export async function didMount() {
     initPendingPaymentWheelScroll.call(this);
     const orderId = getOrderId(this);
+    this.pendingPaymentRemarkDraft = '';
 
     this.setState({
         orderId: orderId,

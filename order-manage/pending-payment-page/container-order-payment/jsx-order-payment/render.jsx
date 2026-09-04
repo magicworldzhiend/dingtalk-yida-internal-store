@@ -72,8 +72,6 @@ function render() {
         ? formatCountdown(pageState.remainingMilliseconds)
         : '--:--:--';
     const submitTime = formatDateTime(order.submitTime);
-    const orderRemark = String(pageState.orderRemark || '');
-
     /** 打开商城首页。 */
     const goToHome = () => {
         this.goToHome();
@@ -282,22 +280,17 @@ function render() {
             </section>
 
             <section class="pending-payment-card pending-payment-remark-card">
-                <div class="pending-payment-section-heading"><h2>备注</h2><span>最多 150 字</span></div>
+                <div class="pending-payment-section-heading"><h2>备注</h2></div>
                 <textarea
-                    defaultValue={orderRemark}
+                    id="pending-payment-remark-input"
+                    maxLength="150"
                     placeholder="可填写订单备注（选填）"
                     disabled={isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
                     onInput={(event) => {
-                        const value = String(event.target.value || '');
-                        this.pendingPaymentRemarkDraft = value;
-                        const counter = document.querySelector('#pending-payment-remark-count');
-                        if (counter) {
-                            counter.textContent = value.length + ' / 150';
-                            counter.classList.toggle('pending-payment-remark-count-exceeded', value.length > 150);
-                        }
+                        this.pendingPaymentRemarkDraft = String(event.target.value || '');
                     }}
                 ></textarea>
-                <div class="pending-payment-remark-footer"><strong id="pending-payment-remark-count" class={orderRemark.length > 150 ? 'pending-payment-remark-count-exceeded' : ''}>{orderRemark.length} / 150</strong></div>
+                <div class="pending-payment-remark-limit">150字上限</div>
             </section>
 
             <section class="pending-payment-card pending-payment-meta-card">
