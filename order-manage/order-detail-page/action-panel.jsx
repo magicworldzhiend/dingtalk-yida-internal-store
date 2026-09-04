@@ -5,6 +5,8 @@ const PENDING_PAYMENT_PAGE_ID = 'FORM-01464CAE858D4323956BD131C332AB9F7IOM';
 const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const ORDER_DETAIL_JSX_ID = 'jsx_mt0wteuu';
 const SKU_FORM_UUID = 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK';
+const PRODUCT_FORM_UUID = 'FORM-173F54EE060A41AF99AA1A776B15917CP6H3';
+const PRODUCT_DETAIL_PAGE_ID = 'FORM-CBE983ABBA9A456882844971E75A61FC1M0L';
 
 /** 将宜搭图片字段转换为可展示的图片地址。 */
 function resolveImageUrl(value) {
@@ -126,7 +128,7 @@ export function initOrderDetailWheelScroll() {
     document.addEventListener('wheel', page.orderDetailWheelScrollHandler, {capture: true, passive: false});
 }
 
-/** 将对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
+/** 将对话框对齐到页面内容区（移动端不含底部导航）的视觉中心。 */
 function centerDialogToPageContent(dialogSelector, pageSelector) {
     window.requestAnimationFrame(() => {
         const dialog = document.querySelector(dialogSelector);
@@ -136,7 +138,9 @@ function centerDialogToPageContent(dialogSelector, pageSelector) {
         const dialogRect = dialog.getBoundingClientRect();
         const pageRect = pageElement.getBoundingClientRect();
         const offsetX = Math.round(pageRect.left + pageRect.width / 2 - (dialogRect.left + dialogRect.width / 2));
-        const offsetY = Math.round(window.innerHeight / 2 - (dialogRect.top + dialogRect.height / 2));
+        const mobileBottomNavigationHeight = window.matchMedia('(max-width: 767px)').matches ? 60 : 0;
+        const visibleCenterY = (window.innerHeight - mobileBottomNavigationHeight) / 2;
+        const offsetY = Math.round(visibleCenterY - (dialogRect.top + dialogRect.height / 2));
         dialog.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px)';
         dialog.style.visibility = 'visible';
         dialog.style.opacity = '1';
@@ -269,7 +273,12 @@ export async function didMount() {
         refreshOrderDetailJsx(this);
         return;
     }
-    this.setState({orderDetailPageStatus: 'loading', order: null, goodsList: [], remainingPaymentMilliseconds: 0, isCancelDialogVisible: false, isCancellingOrder: false});
+    this.setState({
+        orderDetailPageStatus: 'loading', order: null, goodsList: [], remainingPaymentMilliseconds: 0,
+        isCancelDialogVisible: false, isCancellingOrder: false, isGoodsSnapshotDialogVisible: false,
+        snapshotGoods: null, isSnapshotProductChecking: false, snapshotProductAvailable: false,
+        isSnapshotProductCheckFailed: false, isGoodsSnapshotDialogClosing: false
+    });
     refreshOrderDetailJsx(this);
     try {
         const userId = this.utils.getLoginUserId();
@@ -324,6 +333,119 @@ export function closeCancelOrderDialog() {
     refreshOrderDetailJsx(this);
 }
 
+/** 打开订单商品快照，并异步确认当前 SPU 是否仍可查看。 */
+export async function openGoodsSnapshotDialog(goods) {
+    if (!goods) {
+        return;
+    }
+
+    const spuId = String(goods.goodsSpuId || '').trim();
+    if (this.goodsSnapshotCloseTimer) {
+        window.clearTimeout(this.goodsSnapshotCloseTimer);
+        this.goodsSnapshotCloseTimer = null;
+    }
+    const requestId = Number(this.goodsSnapshotRequestId || 0) + 1;
+    this.goodsSnapshotRequestId = requestId;
+    this.setState({
+        isGoodsSnapshotDialogVisible: true,
+        snapshotGoods: goods,
+        isSnapshotProductChecking: Boolean(spuId),
+        snapshotProductAvailable: false,
+        isSnapshotProductCheckFailed: false,
+        isGoodsSnapshotDialogClosing: false
+    });
+    refreshOrderDetailJsx(this);
+    centerDialogToPageContent('.order-detail-snapshot-dialog', '.order-detail-page');
+
+    if (!spuId) {
+        console.warn('[订单详情] 订单商品快照未保存 SPU 编号，无法打开当前商品', goods);
+        this.setState({isSnapshotProductCheckFailed: true});
+        refreshOrderDetailJsx(this);
+        centerDialogToPageContent('.order-detail-snapshot-dialog', '.order-detail-page');
+        return;
+    }
+
+    if (!this.dataSourceMap || !this.dataSourceMap.getGoodsBySpu) {
+        console.error('[订单详情] 未配置 getGoodsBySpu 数据源，无法确认当前商品是否存在');
+        this.setState({isSnapshotProductChecking: false, isSnapshotProductCheckFailed: true});
+        refreshOrderDetailJsx(this);
+        centerDialogToPageContent('.order-detail-snapshot-dialog', '.order-detail-page');
+        return;
+    }
+
+    try {
+        const response = await this.dataSourceMap.getGoodsBySpu.load({
+            formUuid: PRODUCT_FORM_UUID,
+            currentPage: 1,
+            pageSize: 1,
+            searchFieldJson: JSON.stringify({serialNumberField_mszwuoff: spuId})
+        });
+        // 宜搭数据源在不同页面可能返回数组、data 或 result.data，统一提取记录列表。
+        const recordList = [
+            response,
+            response && response.data,
+            response && response.result,
+            response && response.result && response.result.data,
+            response && response.data && response.data.data
+        ].find((value) => Array.isArray(value)) || [];
+        const available = recordList.length > 0;
+
+        if (this.goodsSnapshotRequestId !== requestId) {
+            return;
+        }
+        this.setState({
+            isSnapshotProductChecking: false,
+            snapshotProductAvailable: available,
+            isSnapshotProductCheckFailed: false
+        });
+    } catch (error) {
+        if (this.goodsSnapshotRequestId !== requestId) {
+            return;
+        }
+        console.error('[订单详情] 查询当前商品失败', error);
+        this.setState({
+            isSnapshotProductChecking: false,
+            snapshotProductAvailable: false,
+            isSnapshotProductCheckFailed: true
+        });
+    }
+    refreshOrderDetailJsx(this);
+    centerDialogToPageContent('.order-detail-snapshot-dialog', '.order-detail-page');
+}
+
+/** 关闭订单商品快照弹窗。 */
+export function closeGoodsSnapshotDialog() {
+    if (this.state.isGoodsSnapshotDialogClosing) {
+        return;
+    }
+
+    this.goodsSnapshotRequestId = Number(this.goodsSnapshotRequestId || 0) + 1;
+    this.setState({isGoodsSnapshotDialogClosing: true});
+    refreshOrderDetailJsx(this);
+    this.goodsSnapshotCloseTimer = window.setTimeout(() => {
+        this.goodsSnapshotCloseTimer = null;
+        this.setState({
+            isGoodsSnapshotDialogVisible: false,
+            snapshotGoods: null,
+            isSnapshotProductChecking: false,
+            snapshotProductAvailable: false,
+            isSnapshotProductCheckFailed: false,
+            isGoodsSnapshotDialogClosing: false
+        });
+        refreshOrderDetailJsx(this);
+    }, 180);
+}
+
+/** 从商品快照跳转至仍然存在的当前商品详情。 */
+export function openSnapshotProductDetail() {
+    const goods = this.state.snapshotGoods;
+
+    if (!this.state.snapshotProductAvailable || !goods) {
+        return;
+    }
+    this.openProductDetail(goods);
+}
+
 /** 取消当前待支付订单，并在库存释放成功后完成订单关闭。 */
 export async function cancelPendingOrder() {
     const order = this.state.order || {};
@@ -368,6 +490,7 @@ export async function cancelPendingOrder() {
 
 export function didUnmount() {
     if (this.orderDetailCountdownTimer) window.clearTimeout(this.orderDetailCountdownTimer);
+    if (this.goodsSnapshotCloseTimer) window.clearTimeout(this.goodsSnapshotCloseTimer);
     if (this.orderDetailPaymentBarResizeObserver) this.orderDetailPaymentBarResizeObserver.disconnect();
     if (this.orderDetailWheelScrollHandler) {
         document.removeEventListener('wheel', this.orderDetailWheelScrollHandler, true);
@@ -390,7 +513,7 @@ export function openProductDetail(goods) {
         this.utils.toast({title: '未获取到商品信息，暂时无法打开商品详情', type: 'warning'});
         return;
     }
-    this.utils.router.push('FORM-CBE983ABBA9A456882844971E75A61FC1M0L', {spuID: goods.goodsSpuId});
+    this.utils.router.push(PRODUCT_DETAIL_PAGE_ID, {spuID: goods.goodsSpuId});
 }
 
 /** 格式化时间，供 JSX 中展示。 */

@@ -147,13 +147,13 @@ function render() {
                 </dl>
             </section>
             <section class="order-detail-card order-detail-goods-card">
-                <div class="order-detail-section-heading"><h2>商品明细</h2>
+                <div class="order-detail-section-heading"><h2>商品快照</h2>
                     <span>{goodsList.length ? '共 ' + goodsList.length + ' 件商品' : ''}</span></div>
                 {goodsList.length ?
                     <div class="order-detail-goods-list">{goodsList.map((goods, index) => <button type="button"
                                                                                                   class="order-detail-goods-item"
                                                                                                   key={goods.goodsId || index}
-                                                                                                  onClick={() => page.openProductDetail(goods)}>{goods.imageUrl ?
+                                                                                                  onClick={() => page.openGoodsSnapshotDialog(goods)}>{goods.imageUrl ?
                         <img src={goods.imageUrl} alt={goods.goodsName} loading="lazy" decoding="async"/> :
                         <span class="order-detail-image-empty">商品图</span>}<span
                         class="order-detail-goods-content"><strong>{goods.goodsName}</strong><em>{goods.goodsCategory}</em><em>{goods.specification}</em><em
@@ -165,7 +165,7 @@ function render() {
                         </svg>
                     </button>)}</div> : <div class="order-detail-no-goods">暂无商品数据</div>}</section>
             {goodsList.length ? <section class="order-detail-card order-detail-goods-preview-card">
-                <div class="order-detail-section-heading"><h2>商品明细图</h2><span>规格图片</span></div>
+                <div class="order-detail-section-heading"><h2>商品快照图</h2><span>规格图片</span></div>
                 <div class="order-detail-goods-preview">{goodsList.map((goods, index) => goods.imageUrl ?
                     <img key={goods.goodsId || index} src={goods.imageUrl} alt={goods.goodsName} decoding="async"/> :
                     <span key={goods.goodsId || index}>暂无商品图片</span>)}</div>
@@ -194,6 +194,49 @@ function render() {
                             </button>
                             <button type="button" class="order-detail-dialog-danger" disabled={state.isCancellingOrder}
                                     onClick={() => page.cancelPendingOrder()}>{state.isCancellingOrder ? '取消中...' : '确认取消'}</button>
+                        </div>
+                    </section>
+                </div>}
+            {state.isGoodsSnapshotDialogVisible &&
+                <div class={state.isGoodsSnapshotDialogClosing
+                    ? 'order-detail-dialog-mask order-detail-snapshot-mask-closing'
+                    : 'order-detail-dialog-mask order-detail-snapshot-mask'}
+                     onClick={() => page.closeGoodsSnapshotDialog()}>
+                    <section class={state.isGoodsSnapshotDialogClosing
+                        ? 'order-detail-snapshot-dialog order-detail-snapshot-dialog-closing'
+                        : 'order-detail-snapshot-dialog'} role="dialog" aria-modal="true"
+                             aria-label="商品快照" onClick={(event) => event.stopPropagation()}>
+                        <header class="order-detail-snapshot-header">
+                            <div><h2>商品快照</h2><p>以下信息以订单创建时保存的数据为准</p></div>
+                            <button type="button" aria-label="关闭商品快照"
+                                    onClick={() => page.closeGoodsSnapshotDialog()}>×</button>
+                        </header>
+                        <div class="order-detail-snapshot-layout">
+                            {state.snapshotGoods.imageUrl
+                                ? <img src={state.snapshotGoods.imageUrl} alt={state.snapshotGoods.goodsName} decoding="async"/>
+                                : <div class="order-detail-snapshot-image-empty">暂无规格图片</div>}
+                            <div class="order-detail-snapshot-content">
+                                <h3>{state.snapshotGoods.goodsName || '商品信息缺失'}</h3>
+                                <p>{state.snapshotGoods.goodsCategory || '--'}</p>
+                                <dl>
+                                    <div><dt>下单规格</dt><dd>{state.snapshotGoods.specification || '--'}</dd></div>
+                                    <div><dt>成交单价</dt><dd>¥ {formatAmount(state.snapshotGoods.goodsPrice)}</dd></div>
+                                    <div><dt>购买数量</dt><dd>{state.snapshotGoods.goodsNum || '--'}</dd></div>
+                                    <div><dt>商品小计</dt><dd class="order-detail-snapshot-amount">¥ {formatAmount(state.snapshotGoods.goodsPrice * state.snapshotGoods.goodsNum)}</dd></div>
+                                </dl>
+                                <footer class="order-detail-snapshot-actions">
+                                    <span class={state.isSnapshotProductChecking || state.snapshotProductAvailable
+                                        ? 'order-detail-snapshot-product-entry'
+                                        : 'order-detail-snapshot-product-entry order-detail-snapshot-product-entry-disabled'}>
+                                        <button type="button" class="order-detail-snapshot-primary"
+                                                disabled={state.isSnapshotProductChecking || !state.snapshotProductAvailable}
+                                                onClick={() => page.openSnapshotProductDetail()}>查看商品现状</button>
+                                        {!state.isSnapshotProductChecking && !state.snapshotProductAvailable
+                                            && <span class="order-detail-snapshot-tooltip" role="tooltip">该商品已经被删除</span>}
+                                    </span>
+                                    <button type="button" onClick={() => page.closeGoodsSnapshotDialog()}>关闭</button>
+                                </footer>
+                            </div>
                         </div>
                     </section>
                 </div>}
