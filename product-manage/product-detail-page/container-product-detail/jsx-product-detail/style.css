@@ -77,7 +77,6 @@
 
 :root .product-detail-summary {
     position: relative;
-    overflow: hidden;
 }
 
 :root .product-detail-summary::after {
@@ -132,9 +131,7 @@
 }
 
 :root .product-detail-category {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 :root .product-detail-price-row {
@@ -489,16 +486,13 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    overflow: hidden;
     margin-right: 16px;
     color: #646A73;
     font-size: 13px;
 }
 
 :root .product-detail-purchase-summary span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 :root .product-detail-purchase-summary strong {

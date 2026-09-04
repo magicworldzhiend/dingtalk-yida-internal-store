@@ -181,12 +181,10 @@
 }
 
 :root .my-order-product strong {
-    overflow: hidden;
     max-width: 100%;
     font-size: 16px;
     font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 :root .my-order-product span, :root .my-order-product em {
@@ -400,11 +398,7 @@
     }
 
     :root .my-order-product strong {
-        display: -webkit-box;
-        overflow: hidden;
         white-space: normal;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
     }
 
     :root .my-order-status {
