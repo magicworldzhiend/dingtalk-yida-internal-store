@@ -1,0 +1,18 @@
+{
+  "名称": "getAliPayResult",
+  "描述": "获取阿里支付结果",
+  "自动加载": "是",
+  "请求地址": "/query/publicService/invokeService.json?_csrf_token=c35f4b11-a0e3-4d81-a0b4-2545272c2df5",
+  "请求方式": "GET",
+  "连接器": "自定义连接器：获取支付结果",
+  "执行动作": "handleRequest",
+  "连接器执行动作参数": {
+    "Body":{
+      "outTradeNo":""
+    }
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "fit": "见同名.jsx文件"
+  }
+}

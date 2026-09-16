@@ -82,6 +82,8 @@ function syncMyOrderState(page) {
         myOrderLoading: Boolean(page.__myOrderLoading),
         myOrderLoadFailed: false
     });
+    const orderIdList = list.map(item => item.orderId);
+    console.log("当前列表所有orderId：", orderIdList);
     window.setTimeout(() => window.dispatchEvent(new Event('my-order-list-changed')), 50);
     refreshMyOrderJsx(page);
 }
@@ -127,6 +129,7 @@ export async function didMount() {
         myOrderLoadFailed: false
     });
     initMyOrderWheelScroll.call(this);
+
     this.initMyOrderLoadMore();
     await this.reloadMyOrderList({status: '', keyword: ''});
 }
@@ -204,6 +207,39 @@ export async function reloadMyOrderList(options) {
         this.setState({myOrderList: [], myOrderLoading: false, myOrderLoadFailed: true, myOrderHasMore: false});
         refreshMyOrderJsx(this);
     }
+
+    const cache = this.__myOrderCache;
+    console.log(cache)
+
+    // formInstId
+    // 筛选出 status = "待支付" 的全部订单
+    const waitPayOrders = cache.orderList.filter(item => item.status === "待支付");
+
+    waitPayOrders.forEach(item => {
+        const orderId = item.orderId;
+        const formInstId = item.formInstId;
+        const inputs = JSON.stringify({
+            body: {
+                outTradeNo: orderId,
+            }
+        });
+        this.dataSourceMap.getAliPayResult.load({
+            inputs: inputs
+        }).then(re => {
+            if (re && re.trade_status === "TRADE_SUCCESS") {
+                const formDataObj = {
+                    "radioField_mt2mw54h": "待领用",
+                    "dateField_mt2mw54k": Date.now(),
+                };
+                this.dataSourceMap.updatePayStatus.load({
+                    formInstId: formInstId,
+                    updateFormDataJson: JSON.stringify(formDataObj)
+                })
+            }
+        }).catch(err => {
+            console.error("查询异常", orderId, err);
+        })
+    })
 }
 
 /** 触底时自动加载下一页订单。 */

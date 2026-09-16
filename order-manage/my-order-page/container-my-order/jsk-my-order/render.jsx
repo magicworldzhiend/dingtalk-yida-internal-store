@@ -65,49 +65,49 @@ function render() {
     return (
         <div class={isMobile ? 'my-order-page my-order-page-mobile' : 'my-order-page'}>
             <div class="my-order-fixed-header">
-            <section class="my-order-toolbar">
-                <div class="my-order-tabs" role="tablist" aria-label="订单状态">
-                    {statusList.map((status) => (
-                        <button
-                            key={status || 'all'}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeStatus === status}
-                            class={activeStatus === status ? 'my-order-tab my-order-tab-active' : 'my-order-tab'}
-                            onClick={() => selectStatus(status)}
-                        >
-                            {status || '全部'}
+                <section class="my-order-toolbar">
+                    <div class="my-order-tabs" role="tablist" aria-label="订单状态">
+                        {statusList.map((status) => (
+                            <button
+                                key={status || 'all'}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeStatus === status}
+                                class={activeStatus === status ? 'my-order-tab my-order-tab-active' : 'my-order-tab'}
+                                onClick={() => selectStatus(status)}
+                            >
+                                {status || '全部'}
+                            </button>
+                        ))}
+                    </div>
+                    {isMobile ? <div class="my-order-mobile-search">
+                        <input
+                            defaultValue={keywordInput}
+                            placeholder="搜索订单号或商品名称"
+                            onInput={(event) => {
+                                page.myOrderKeywordDraft = event.target.value;
+                            }}
+                            onKeyDown={submitSearchOnEnter}
+                        />
+                        <button type="button" onClick={submitSearch}>搜索</button>
+                    </div> : <div class="my-order-search">
+                        <input
+                            defaultValue={keywordInput}
+                            placeholder="搜索订单号或商品名称"
+                            onInput={(event) => {
+                                page.myOrderKeywordDraft = event.target.value;
+                            }}
+                            onKeyDown={submitSearchOnEnter}
+                        />
+                        <button type="button" aria-label="搜索" onClick={submitSearch}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 strokeWidth="2" strokeLinecap="round">
+                                <circle cx="11" cy="11" r="6"></circle>
+                                <path d="M20 20l-4.2-4.2"></path>
+                            </svg>
                         </button>
-                    ))}
-                </div>
-                {isMobile ? <div class="my-order-mobile-search">
-                    <input
-                        defaultValue={keywordInput}
-                        placeholder="搜索订单号或商品名称"
-                        onInput={(event) => {
-                            page.myOrderKeywordDraft = event.target.value;
-                        }}
-                        onKeyDown={submitSearchOnEnter}
-                    />
-                    <button type="button" onClick={submitSearch}>搜索</button>
-                </div> : <div class="my-order-search">
-                    <input
-                        defaultValue={keywordInput}
-                        placeholder="搜索订单号或商品名称"
-                        onInput={(event) => {
-                            page.myOrderKeywordDraft = event.target.value;
-                        }}
-                        onKeyDown={submitSearchOnEnter}
-                    />
-                    <button type="button" aria-label="搜索" onClick={submitSearch}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                             strokeWidth="2" strokeLinecap="round">
-                            <circle cx="11" cy="11" r="6"></circle>
-                            <path d="M20 20l-4.2-4.2"></path>
-                        </svg>
-                    </button>
-                </div>}
-            </section>
+                    </div>}
+                </section>
             </div>
 
             <main class="my-order-list">
