@@ -87,13 +87,13 @@ function render() {
         const currentOrderId = order.orderId || orderId;
 
         if (!currentOrderId) {
-            this.utils.toast({ title: '未获取到订单编号，暂时无法打开订单详情', type: 'warning' });
+            this.utils.toast({title: '未获取到订单编号，暂时无法打开订单详情', type: 'warning'});
             return;
         }
 
         this.utils.router.push(
             'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8',
-            { orderNo: currentOrderId }
+            {orderNo: currentOrderId}
         );
     };
 
@@ -111,7 +111,7 @@ function render() {
         if (isSubmittingPayment || isCancellingOrder || order.status !== '待支付') {
             return;
         }
-        this.setState({ selectedPaymentMethod: paymentMethod });
+        this.setState({selectedPaymentMethod: paymentMethod});
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -121,7 +121,7 @@ function render() {
     /** 返回本订单对应的商品详情页，并保留 SPU 路由参数。 */
     const goBackToProduct = () => {
         if (!orderDetail.spuId) {
-            this.utils.toast({ title: '未获取到商品信息，无法返回商品详情', type: 'warning' });
+            this.utils.toast({title: '未获取到商品信息，无法返回商品详情', type: 'warning'});
             return;
         }
 
@@ -135,7 +135,7 @@ function render() {
         if (!canCancel) {
             return;
         }
-        this.setState({ isCancelDialogVisible: true });
+        this.setState({isCancelDialogVisible: true});
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -148,7 +148,7 @@ function render() {
         if (isCancellingOrder) {
             return;
         }
-        this.setState({ isCancelDialogVisible: false });
+        this.setState({isCancelDialogVisible: false});
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -190,13 +190,15 @@ function render() {
 
     return (
         <div class="pending-payment-page">
-            {!isMobile && <div class="pending-payment-global-layout"><nav class="pending-payment-breadcrumb" aria-label="页面层级">
+            {!isMobile && <div class="pending-payment-global-layout">
+                <nav class="pending-payment-breadcrumb" aria-label="页面层级">
                     <button type="button" onClick={goToHome}>首页</button>
                     <span aria-hidden="true">/</span>
                     <button type="button" onClick={goToMyOrders}>我的订单</button>
                     <span aria-hidden="true">/</span>
                     <span aria-current="page">订单支付</span>
-            </nav></div>}
+                </nav>
+            </div>}
             <header class="pending-payment-header">
                 <h1>{pageStatus === 'closed' ? '订单已关闭' : '待付款'}</h1>
                 <p>{pageStatus === 'closed'
@@ -211,7 +213,7 @@ function render() {
                     ? '订单已超时，等待关闭结果确认。'
                     : pageStatus === 'closed'
                         ? '订单已关闭，支付入口不可用。'
-                    : '支付截止时间：' + formatDateTime(order.timeoutCloseTime)}</p>
+                        : '支付截止时间：' + formatDateTime(order.timeoutCloseTime)}</p>
             </section>
 
             <section class="pending-payment-card pending-payment-product-card">
@@ -254,13 +256,13 @@ function render() {
                             disabled={isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
                             onClick={() => selectPaymentMethod(paymentMethod)}
                         >
-                            <span class="pending-payment-method-icon" aria-hidden="true">
-                                {getPaymentMethodIcon(paymentMethod)}
-                            </span>
+              <span class="pending-payment-method-icon" aria-hidden="true">
+                {getPaymentMethodIcon(paymentMethod)}
+              </span>
                             <span>{paymentMethod}</span>
                             <span class="pending-payment-method-check" aria-hidden="true">
-                                {selectedPaymentMethod === paymentMethod ? '✓' : ''}
-                            </span>
+                {selectedPaymentMethod === paymentMethod ? '✓' : ''}
+              </span>
                         </button>
                     ))}
                 </div>

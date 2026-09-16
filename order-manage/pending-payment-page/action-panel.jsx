@@ -331,7 +331,7 @@ async function loadRawOrderData(page, orderId) {
 
     const pendingPaymentData = buildPendingPaymentData(orderResponse, orderDetailResponse);
     if (!pendingPaymentData) {
-        page.setState({ pageStatus: 'not-found' });
+        page.setState({pageStatus: 'not-found'});
         return;
     }
 
@@ -384,7 +384,7 @@ export async function didMount() {
         await loadRawOrderData(this, orderId);
     } catch (error) {
         console.error('[待付款页] 查询订单失败：', error);
-        this.setState({ pageStatus: 'load-failed' });
+        this.setState({pageStatus: 'load-failed'});
     }
 }
 
@@ -413,6 +413,67 @@ export function goToMyOrders() {
  * 支付方式写回成功后才允许进入在线收款流程；当前尚未接入在线收款，
  * 因此本方法只完成写回与结果提示，不得伪造支付成功。
  */
+// export async function onConfirmPayment() {
+//   const order = this.state.order || {};
+//   const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
+//   const orderRemark = String(typeof this.pendingPaymentRemarkDraft === 'string'
+//     ? this.pendingPaymentRemarkDraft
+//     : this.state.orderRemark || '');
+
+//   if (this.state.pageStatus !== 'loaded' || order.status !== '待支付') {
+//     this.utils.toast({
+//       title: '当前订单不可支付，请刷新后重试。',
+//       type: 'warning',
+//     });
+//     return;
+//   }
+
+//   if (orderRemark.length > 150) {
+//     this.utils.toast({ title: '备注不能超过 150 字', type: 'warning' });
+//     return;
+//   }
+
+//   if (!order.formInstId || !selectedPaymentMethod) {
+//     this.utils.toast({
+//       title: '未获取到订单或支付方式，请刷新后重试。',
+//       type: 'warning',
+//     });
+//     return;
+//   }
+
+//   this.setState({ isSubmittingPayment: true });
+//   refreshPendingPaymentJsx(this);
+
+//   try {
+//     await this.dataSourceMap.updateOrderPaymentMethod.load({
+//       formInstId: order.formInstId,
+//       updateFormDataJson: JSON.stringify({
+//         radioField_mtgliziq: selectedPaymentMethod,
+//         textareaField_mt2mw54i: orderRemark,
+//       }),
+//     });
+
+//     this.setState({
+//       order: Object.assign({}, order, {
+//         paymentMethod: selectedPaymentMethod,
+//         remark: orderRemark,
+//       }),
+//     });
+//     this.utils.toast({
+//       title: '支付方式已保存，正在准备支付。',
+//       type: 'success',
+//     });
+//   } catch (error) {
+//     console.error('[待付款页] 更新支付方式失败：', error);
+//     this.utils.toast({
+//       title: '支付方式保存失败，请稍后重试。',
+//       type: 'error',
+//     });
+//   } finally {
+//     this.setState({ isSubmittingPayment: false });
+//     refreshPendingPaymentJsx(this);
+//   }
+// }
 export async function onConfirmPayment() {
     const order = this.state.order || {};
     const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
@@ -420,6 +481,7 @@ export async function onConfirmPayment() {
         ? this.pendingPaymentRemarkDraft
         : this.state.orderRemark || '');
 
+    // 基础状态校验
     if (this.state.pageStatus !== 'loaded' || order.status !== '待支付') {
         this.utils.toast({
             title: '当前订单不可支付，请刷新后重试。',
@@ -427,12 +489,10 @@ export async function onConfirmPayment() {
         });
         return;
     }
-
     if (orderRemark.length > 150) {
         this.utils.toast({title: '备注不能超过 150 字', type: 'warning'});
         return;
     }
-
     if (!order.formInstId || !selectedPaymentMethod) {
         this.utils.toast({
             title: '未获取到订单或支付方式，请刷新后重试。',
@@ -441,10 +501,11 @@ export async function onConfirmPayment() {
         return;
     }
 
-    this.setState({ isSubmittingPayment: true });
+    this.setState({isSubmittingPayment: true});
     refreshPendingPaymentJsx(this);
 
     try {
+        // 1. 先保存支付方式和备注（保留原有业务逻辑）
         await this.dataSourceMap.updateOrderPaymentMethod.load({
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
@@ -459,21 +520,85 @@ export async function onConfirmPayment() {
                 remark: orderRemark,
             }),
         });
-        this.utils.toast({
-            title: '支付方式已保存，正在准备支付。',
-            type: 'success',
-        });
+
+        // 2. 选择支付宝时，调用支付连接器并自动跳转
+        if (selectedPaymentMethod === '支付宝') {
+            this.utils.toast({
+                title: '正在唤起支付宝支付...',
+                type: 'loading',
+                duration: 0,
+            });
+
+            console.log("req", order.orderId, order.payableAmount, orderRemark)
+
+            // 调用支付宝支付连接器
+            // const payRes = await this.dataSourceMap.alipayPay.load({
+            //   outTradeNo: order.orderId,    // 订单号：冒号左边必须和连接器输入参数名一致
+            //   totalAmount: order.payableAmount, // 实付金额：冒号左边必须和连接器输入参数名一致
+            //   subject: orderRemark || '商品订单支付', // 订单标题
+            // });
+            const inputs = JSON.stringify({
+                body: {
+                    outTradeNo: order.orderId,
+                    totalAmount: order.payableAmount,
+                    subject: orderRemark || '商品订单支付'
+                }
+            });
+
+            // 调用连接器，参数名必须叫 inputs
+            const payRes = await this.dataSourceMap.alipayPay.load({
+                inputs: inputs
+            });
+            // // 弹窗显示完整返回结果
+            // alert("【连接器返回结果】\n成功：" + payRes.success +
+            //   "\n错误信息：" + (payRes.error || "无") +
+            //   "\n订单号：" + payRes.outTradeNo +
+            //   "\n金额：" + payRes.totalAmount +
+            //   "\n标题：" + payRes.subject +
+            //   "\ninput:" +payRes.input
+            // );
+            console.log("payRes:", payRes)
+            // 校验连接器返回结果
+            // if (!payRes || !payRes.success || !payRes.result) {
+            //   throw new Error((payRes && payRes.error) || '支付链接生成失败，请稍后重试');
+            // }
+
+            // 3. 创建隐藏表单并自动提交，跳转到支付宝支付页
+            // const formHtml = payRes.result.form;
+            const formHtml = payRes.result;
+            const div = document.createElement('div');
+            div.style.display = 'none';
+            div.innerHTML = formHtml;
+            document.body.appendChild(div);
+
+            const form = div.querySelector('form');
+            if (!form) {
+                throw new Error('支付表单异常，无法跳转');
+            }
+            form.setAttribute('target', '_blank');
+            form.submit(); // 自动提交表单，页面会跳转到支付宝
+
+        } else {
+            // 微信支付暂未接入时的提示
+            this.utils.toast({
+                title: '微信支付暂未开通',
+                type: 'warning',
+            });
+            this.setState({isSubmittingPayment: false});
+            refreshPendingPaymentJsx(this);
+        }
+
     } catch (error) {
-        console.error('[待付款页] 更新支付方式失败：', error);
+        console.error('[待付款页] 支付发起失败：', error);
         this.utils.toast({
-            title: '支付方式保存失败，请稍后重试。',
+            title: error.message || '支付发起失败，请稍后重试',
             type: 'error',
         });
-    } finally {
-        this.setState({ isSubmittingPayment: false });
+        this.setState({isSubmittingPayment: false});
         refreshPendingPaymentJsx(this);
     }
 }
+
 
 /**
  * 取消待支付订单。
@@ -484,12 +609,12 @@ export async function onCancelOrder() {
     const order = this.state.order || {};
 
     if (order.status !== '待支付' || !order.formInstId) {
-        this.utils.toast({ title: '当前订单不可取消，请刷新后重试', type: 'warning' });
+        this.utils.toast({title: '当前订单不可取消，请刷新后重试', type: 'warning'});
         return;
     }
 
     const closeTime = Date.now();
-    this.setState({ isCancellingOrder: true });
+    this.setState({isCancellingOrder: true});
     refreshPendingPaymentJsx(this);
 
     try {
@@ -522,7 +647,7 @@ export async function onCancelOrder() {
             }),
         });
         refreshPendingPaymentJsx(this);
-        this.utils.toast({ title: '订单已取消', type: 'success' });
+        this.utils.toast({title: '订单已取消', type: 'success'});
         this.utils.router.replace(MY_ORDER_PAGE_ID);
     } catch (error) {
         console.error('[待付款页] 取消订单失败：', error);
@@ -531,7 +656,7 @@ export async function onCancelOrder() {
             type: 'error',
         });
     } finally {
-        this.setState({ isCancellingOrder: false });
+        this.setState({isCancellingOrder: false});
         refreshPendingPaymentJsx(this);
     }
 }

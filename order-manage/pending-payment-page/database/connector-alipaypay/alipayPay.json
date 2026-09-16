@@ -1,0 +1,18 @@
+{
+  "名称": "alipayPay",
+  "描述": "连接器-阿里云支付",
+  "自动加载": "否",
+  "请求地址": "/query/publicService/invokeService.json?_csrf_token=59e8129e-b21b-4208-974d-63dc0aeb7729",
+  "请求方式": "POST",
+  "连接器": "自定义连接器",
+  "执行动作": "handleRequest",
+  "连接器执行动作参数": {
+    "totalAmount":"123",
+    "subject":"测试",
+    "outTradeNo":123
+  },
+  "是否发送请求": "是",
+  "数据处理": {
+    "fit": "见同名.jsx文件"
+  }
+}
