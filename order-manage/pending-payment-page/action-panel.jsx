@@ -386,6 +386,15 @@ export async function didMount() {
         console.error('[待付款页] 查询订单失败：', error);
         this.setState({pageStatus: 'load-failed'});
     }
+
+    // 加载钉钉
+    const script = document.createElement('script');
+    script.src = 'https://g.alicdn.com/dingding/dingtalk-jsapi/2.10.3/dingtalk.open.js';
+    await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+    });
 }
 
 /** 卸载待支付页时释放页面级监听和倒计时。 */
@@ -575,8 +584,50 @@ export async function onConfirmPayment() {
             if (!form) {
                 throw new Error('支付表单异常，无法跳转');
             }
-            form.setAttribute('target', '_blank');
-            form.submit(); // 自动提交表单，页面会跳转到支付宝
+
+
+            const ua = navigator.userAgent.toLowerCase();
+            const isMobile = /android|iphone|ipad|ipod/.test(ua);
+            if (isMobile) {
+                // 移动端：关闭loading，弹出提示，手动按钮打开
+                // // 宜搭弹窗，展示按钮
+                // this.utils.dialog({
+                //   title: '请在浏览器打开支付',
+                //   content: '钉钉内置浏览器无法自动唤起支付宝，请点击下方按钮打开外部浏览器进行支付',
+                //   footer: (
+                //     <button onClick={async () => {
+                //       // 用户点击事件内打开新窗口
+                //       const newWin = window.open('', '_blank');
+                //       if (!newWin) {
+                //         this.utils.toast({ title: "弹窗被拦截，请允许弹窗", type: "error" });
+                //         return;
+                //       }
+                //       // 新建空白文档，把表单克隆过去
+                //       const newDoc = newWin.document;
+                //       newDoc.open();
+                //       newDoc.write('<html><body></body></html>');
+                //       newDoc.close();
+                //       // 克隆表单节点，放入新窗口body
+                //       const formClone = form.cloneNode(true);
+                //       newDoc.body.appendChild(formClone);
+                //       // 在新窗口提交表单
+                //       formClone.submit();
+                //     }}>
+                //       打开新页面支付
+                // </button>
+                //   )
+                // })
+
+                form.setAttribute('target', '_self');
+                form.submit();
+
+            } else {
+                form.setAttribute('target', '_blank');
+                form.submit();
+            }
+
+            // form.setAttribute('target', '_blank');
+            // form.submit(); // 自动提交表单，页面会跳转到支付宝
 
         } else {
             // 微信支付暂未接入时的提示

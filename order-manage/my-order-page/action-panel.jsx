@@ -26,6 +26,37 @@ function refreshMyOrderJsx(page) {
     }
 }
 
+/**
+ * 页面重新可见时重新查询订单列表。
+ *
+ * 支付平台在独立窗口完成支付后，当前页面重新获得焦点时重新读取订单表，
+ * 并通过既有支付结果连接器同步尚未落库的支付状态。
+ *
+ * @param {Object} page 页面上下文
+ */
+function initMyOrderVisibilityRefresh(page) {
+    page.myOrderVisibilityRefreshHandler = () => {
+        if (document.visibilityState === 'hidden'
+            || page.__myOrderLoading
+            || page.__myOrderRefreshing) {
+            return;
+        }
+
+        const pageState = page.state || {};
+        page.__myOrderRefreshing = true;
+        page.reloadMyOrderList({
+            status: pageState.myOrderStatus || '',
+            keyword: pageState.myOrderKeyword || '',
+        }).catch((error) => {
+            console.error('[我的订单] 回跳后刷新订单失败：', error);
+        }).finally(() => {
+            page.__myOrderRefreshing = false;
+        });
+    };
+    window.addEventListener('focus', page.myOrderVisibilityRefreshHandler);
+    document.addEventListener('visibilitychange', page.myOrderVisibilityRefreshHandler);
+}
+
 /** 查询一个订单对应的商品快照。 */
 async function loadOrderDetail(page, orderId) {
     const response = await page.dataSourceMap.getOrderDetails.load({
@@ -118,6 +149,93 @@ async function loadNextOrderPage(page) {
     cache.currentPage = Number(response && response.currentPage || cache.currentPage + 1);
 }
 
+/**
+ * 解析支付宝结果连接器的业务返回值。
+ *
+ * @param {Object} response 连接器响应
+ * @returns {Object} 支付宝业务响应
+ */
+function resolveAliPayResult(response) {
+    let result = response && response.content !== undefined ? response.content : response;
+
+    if (typeof result === 'string') {
+        try {
+            result = JSON.parse(result);
+        } catch (error) {
+            return {};
+        }
+    }
+
+    return result && result.serviceReturnValue !== undefined
+        ? result.serviceReturnValue
+        : result || {};
+}
+
+/**
+ * 查询待支付订单的支付宝结果，并将已支付订单更新为待领用。
+ *
+ * 当前支付服务尚未通过异步通知更新宜搭订单，因此保留订单列表页的
+ * 支付结果查询作为兼容兜底。写入成功后同步更新本地缓存，避免页面
+ * 继续展示旧的待支付状态。
+ *
+ * @param {Object} page 页面上下文
+ * @returns {Promise<Boolean>} 是否存在已同步的支付订单
+ */
+async function syncPendingOrderPaymentStatus(page) {
+    const cache = page.__myOrderCache;
+    const pendingOrders = cache && cache.orderList
+        ? cache.orderList.filter((order) => order.status === '待支付' && order.orderId && order.formInstId)
+        : [];
+
+    if (!pendingOrders.length) {
+        return false;
+    }
+
+    const updatedOrderIds = await Promise.all(pendingOrders.map(async (order) => {
+        try {
+            const response = await page.dataSourceMap.getAliPayResult.load({
+                inputs: JSON.stringify({
+                    body: {outTradeNo: order.orderId},
+                }),
+            });
+            const paymentResult = resolveAliPayResult(response);
+            const tradeStatus = paymentResult.trade_status;
+
+            if (tradeStatus !== 'TRADE_SUCCESS' && tradeStatus !== 'TRADE_FINISHED') {
+                return '';
+            }
+
+            await page.dataSourceMap.updatePayStatus.load({
+                formInstId: order.formInstId,
+                updateFormDataJson: JSON.stringify({
+                    radioField_mt2mw54h: '待领用',
+                    dateField_mt2mw54k: Date.now(),
+                }),
+            });
+            return order.orderId;
+        } catch (error) {
+            console.error('[我的订单] 同步支付宝支付结果失败：', order.orderId, error);
+            return '';
+        }
+    }));
+    const updatedOrderIdMap = updatedOrderIds.reduce((result, orderId) => {
+        if (orderId) {
+            result[orderId] = true;
+        }
+        return result;
+    }, {});
+
+    if (!Object.keys(updatedOrderIdMap).length) {
+        return false;
+    }
+
+    cache.orderList = cache.orderList.map((order) => updatedOrderIdMap[order.orderId]
+        ? Object.assign({}, order, {status: '待领用'})
+        : order
+    );
+    return true;
+}
+
 /** 初始化订单页面和自动加载观察器。 */
 export async function didMount() {
     this.setState({
@@ -129,6 +247,7 @@ export async function didMount() {
         myOrderLoadFailed: false
     });
     initMyOrderWheelScroll.call(this);
+    initMyOrderVisibilityRefresh(this);
 
     this.initMyOrderLoadMore();
     await this.reloadMyOrderList({status: '', keyword: ''});
@@ -199,6 +318,7 @@ export async function reloadMyOrderList(options) {
         while (keyword && this.__myOrderCache.orderList.length < this.__myOrderCache.totalCount) {
             await loadNextOrderPage(this);
         }
+        await syncPendingOrderPaymentStatus(this);
         this.__myOrderLoading = false;
         syncMyOrderState(this);
     } catch (error) {
@@ -207,39 +327,6 @@ export async function reloadMyOrderList(options) {
         this.setState({myOrderList: [], myOrderLoading: false, myOrderLoadFailed: true, myOrderHasMore: false});
         refreshMyOrderJsx(this);
     }
-
-    const cache = this.__myOrderCache;
-    console.log(cache)
-
-    // formInstId
-    // 筛选出 status = "待支付" 的全部订单
-    const waitPayOrders = cache.orderList.filter(item => item.status === "待支付");
-
-    waitPayOrders.forEach(item => {
-        const orderId = item.orderId;
-        const formInstId = item.formInstId;
-        const inputs = JSON.stringify({
-            body: {
-                outTradeNo: orderId,
-            }
-        });
-        this.dataSourceMap.getAliPayResult.load({
-            inputs: inputs
-        }).then(re => {
-            if (re && re.trade_status === "TRADE_SUCCESS") {
-                const formDataObj = {
-                    "radioField_mt2mw54h": "待领用",
-                    "dateField_mt2mw54k": Date.now(),
-                };
-                this.dataSourceMap.updatePayStatus.load({
-                    formInstId: formInstId,
-                    updateFormDataJson: JSON.stringify(formDataObj)
-                })
-            }
-        }).catch(err => {
-            console.error("查询异常", orderId, err);
-        })
-    })
 }
 
 /** 触底时自动加载下一页订单。 */
@@ -391,5 +478,9 @@ export function didUnmount() {
     }
     if (this.__myOrderListChangedHandler) {
         window.removeEventListener('my-order-list-changed', this.__myOrderListChangedHandler);
+    }
+    if (this.myOrderVisibilityRefreshHandler) {
+        window.removeEventListener('focus', this.myOrderVisibilityRefreshHandler);
+        document.removeEventListener('visibilitychange', this.myOrderVisibilityRefreshHandler);
     }
 }
