@@ -1,8 +1,7 @@
 /**
  * 渲染待付款订单确认页。
  *
- * order 与 orderDetail 将在订单数据源接入后由页面 JS 写入 state；
- * 当前页面先完整承载加载态和订单信息布局，不发起支付或库存写入。
+ * 订单和收货信息由页面 JS 加载，保存与支付操作交由页面事件处理。
  */
 function render() {
     /** 将金额格式化为人民币展示文本。 */
@@ -54,14 +53,20 @@ function render() {
     const isMissingOrderId = pageStatus === 'missing-order-id';
     const isOrderLoaded = pageStatus === 'loaded' || pageStatus === 'expired' || pageStatus === 'closed';
     const selectedPaymentMethod = pageState.selectedPaymentMethod || order.paymentMethod || '';
+    const wechatPayment = pageState.wechatPayment || null;
     const isSubmittingPayment = Boolean(pageState.isSubmittingPayment);
     const isCancellingOrder = Boolean(pageState.isCancellingOrder);
+    const isSavingShippingInfo = Boolean(pageState.isSavingShippingInfo);
+    const shippingInfoDraft = pageState.shippingInfoDraft || {};
+    const canEditShippingInfo = pageStatus === 'loaded'
+        && order.status === '待支付'
+        && !isSavingShippingInfo && !isSubmittingPayment && !isCancellingOrder;
     const isCancelDialogVisible = Boolean(pageState.isCancelDialogVisible);
     const canPay = pageStatus === 'loaded'
         && order.status === '待支付'
         && Boolean(selectedPaymentMethod)
         && !isSubmittingPayment;
-    const canCancel = order.status === '待支付' && !isCancellingOrder;
+    const canCancel = order.status === '待支付' && !isCancellingOrder && !isSavingShippingInfo;
     const imageUrl = orderDetail.imageUrl || '';
     const productName = orderDetail.productName || '订单商品加载中';
     const specification = orderDetail.specification || '--';
@@ -87,13 +92,13 @@ function render() {
         const currentOrderId = order.orderId || orderId;
 
         if (!currentOrderId) {
-            this.utils.toast({title: '未获取到订单编号，暂时无法打开订单详情', type: 'warning'});
+            this.utils.toast({ title: '未获取到订单编号，暂时无法打开订单详情', type: 'warning' });
             return;
         }
 
         this.utils.router.push(
             'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8',
-            {orderNo: currentOrderId}
+            { orderNo: currentOrderId }
         );
     };
 
@@ -111,7 +116,7 @@ function render() {
         if (isSubmittingPayment || isCancellingOrder || order.status !== '待支付') {
             return;
         }
-        this.setState({selectedPaymentMethod: paymentMethod});
+        this.setState({ selectedPaymentMethod: paymentMethod });
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -121,7 +126,7 @@ function render() {
     /** 返回本订单对应的商品详情页，并保留 SPU 路由参数。 */
     const goBackToProduct = () => {
         if (!orderDetail.spuId) {
-            this.utils.toast({title: '未获取到商品信息，无法返回商品详情', type: 'warning'});
+            this.utils.toast({ title: '未获取到商品信息，无法返回商品详情', type: 'warning' });
             return;
         }
 
@@ -135,7 +140,7 @@ function render() {
         if (!canCancel) {
             return;
         }
-        this.setState({isCancelDialogVisible: true});
+        this.setState({ isCancelDialogVisible: true });
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -148,7 +153,7 @@ function render() {
         if (isCancellingOrder) {
             return;
         }
-        this.setState({isCancelDialogVisible: false});
+        this.setState({ isCancelDialogVisible: false });
         const jsxComponent = this.$('jsx_mtgm8ahr');
         if (jsxComponent) {
             jsxComponent.forceUpdate();
@@ -243,6 +248,43 @@ function render() {
                 </div>
             </section>
 
+            <section class="pending-payment-card pending-payment-shipping-card">
+                <h2>收货信息</h2>
+                <div class="pending-payment-shipping-fields">
+                    {[
+                        {key: 'recipient', label: '收件人', type: 'text'},
+                        {key: 'address', label: '地址', type: 'text'},
+                        {key: 'phone', label: '电话', type: 'tel'},
+                    ].map((field) => (
+                        <label key={field.key} class="pending-payment-shipping-field">
+                            <span>{field.label}<span class="pending-payment-required"> *</span></span>
+                            <input
+                                type={field.type}
+                                required
+                                value={shippingInfoDraft[field.key] || ''}
+                                placeholder={'请输入' + field.label}
+                                disabled={!canEditShippingInfo}
+                                onChange={(event) => {
+                                    this.setState({shippingInfoDraft: Object.assign(
+                                        {}, this.state.shippingInfoDraft, {[field.key]: event.target.value}
+                                    )});
+                                    const jsxComponent = this.$('jsx_mtgm8ahr');
+                                    if (jsxComponent) jsxComponent.forceUpdate();
+                                }}
+                            />
+                        </label>
+                    ))}
+                </div>
+                <button
+                    type="button"
+                    class="pending-payment-shipping-save"
+                    disabled={!canEditShippingInfo}
+                    onClick={() => this.onSaveShippingInfo()}
+                >
+                    {isSavingShippingInfo ? '保存中...' : '保存收货信息'}
+                </button>
+            </section>
+
             <section class="pending-payment-card pending-payment-method-card">
                 <h2>支付方式</h2>
                 <div class="pending-payment-method-list">
@@ -267,6 +309,38 @@ function render() {
                     ))}
                 </div>
             </section>
+
+            {wechatPayment ? (
+                <section class="pending-payment-card pending-payment-wechat-card">
+                    <div class="pending-payment-section-heading">
+                        <h2>微信扫码支付</h2>
+                        <span>{wechatPayment.status === 'SUCCESS'
+                            ? '支付成功'
+                            : wechatPayment.status === 'CLOSED'
+                                ? '支付已关闭'
+                                : wechatPayment.status === 'FAILED'
+                                    ? '支付失败'
+                                    : '等待支付'}</span>
+                    </div>
+                    {wechatPayment.status === 'PENDING' ? (
+                        <div class="pending-payment-wechat-content">
+                            <img
+                                class="pending-payment-wechat-qr-code"
+                                src={wechatPayment.qrCodeImageUrl}
+                                alt="微信支付二维码"
+                            />
+                            <p>{isMobile
+                                ? '请长按二维码保存到相册，再打开微信扫一扫，从相册选择该二维码完成支付。'
+                                : '请打开微信扫一扫完成支付。支付结果确认后将自动跳转至订单详情。'}</p>
+                            <p class="pending-payment-wechat-attempt">支付单号：{wechatPayment.paymentAttemptNo}</p>
+                        </div>
+                    ) : (
+                        <p>{wechatPayment.status === 'SUCCESS'
+                            ? '支付已确认，正在跳转订单详情。'
+                            : '当前支付单不可继续支付，请刷新订单后重试。'}</p>
+                    )}
+                </section>
+            ) : null}
 
             <section class="pending-payment-card pending-payment-remark-card">
                 <div class="pending-payment-section-heading"><h2>备注</h2></div>
@@ -342,7 +416,7 @@ function render() {
                         </button>
                         <button
                             type="button"
-                            disabled={!canPay || isCancellingOrder}
+                            disabled={!canPay || isCancellingOrder || isSavingShippingInfo}
                             onClick={() => this.onConfirmPayment()}
                         >
                             {isSubmittingPayment ? '保存中...' : '去支付'}

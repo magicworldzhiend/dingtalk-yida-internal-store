@@ -1,0 +1,25 @@
+{
+  "名称": "wechatPay",
+  "描述": "连接器-微信支付",
+  "自动加载": "否",
+  "请求方式": "POST",
+  "连接器": "待配置：内部微信支付服务连接器",
+  "执行动作": "handleRequest",
+  "调用参数": {
+    "inputs": "{\"Body\":{\"action\":\"CREATE|QUERY|CLOSE\",\"orderId\":\"订单业务流水号\",\"paymentAttemptNo\":\"支付尝试号（QUERY/CLOSE）\"}}"
+  },
+  "安全约束": [
+    "页面仅传递动作、支付场景、订单业务流水号和支付尝试号，不传递金额、商户号、APIv3 密钥或证书",
+    "CREATE 时支付服务必须自行查询订单、校验当前状态及支付截止时间",
+    "支付成功只能由支付服务验签/查单后更新宜搭订单"
+  ],
+  "响应契约": {
+    "公共字段": "success：连接器调用是否成功；message：提示信息",
+    "CREATE": "paymentAttemptNo、qrCodeImageUrl、expiresAt",
+    "QUERY": "paymentStatus：PENDING、SUCCESS、CLOSED 或 FAILED",
+    "CLOSE": "支付单已关闭或已确认成功的处理结果"
+  },
+  "数据处理": {
+    "fit": "见同名.jsx文件"
+  }
+}

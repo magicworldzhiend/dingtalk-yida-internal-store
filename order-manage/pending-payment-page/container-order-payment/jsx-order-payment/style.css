@@ -1,3 +1,50 @@
+.pending-payment-shipping-fields {
+    display: grid;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.pending-payment-shipping-field {
+    display: grid;
+    gap: 8px;
+    color: #1f2329;
+    font-size: 14px;
+}
+
+.pending-payment-required {
+    color: #e5484d;
+}
+
+.pending-payment-shipping-field input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #d9dce1;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.pending-payment-shipping-field input:focus {
+    outline: 2px solid #1677ff;
+    outline-offset: 1px;
+}
+
+.pending-payment-shipping-save {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #1677ff;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.pending-payment-shipping-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .pending-payment-page {
     display: grid;
     min-height: 100%;
@@ -173,6 +220,47 @@
 
 .pending-payment-method-card h2 {
     font-size: 16px;
+}
+
+.pending-payment-wechat-card {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.pending-payment-wechat-card .pending-payment-section-heading {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.pending-payment-wechat-card .pending-payment-section-heading span {
+    color: #07c160;
+}
+
+.pending-payment-wechat-content {
+    display: grid;
+    width: 100%;
+    justify-items: center;
+    gap: 10px;
+}
+
+.pending-payment-wechat-qr-code {
+    display: block;
+    width: min(100%, 220px);
+    aspect-ratio: 1;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    object-fit: contain;
+}
+
+.pending-payment-wechat-attempt {
+    color: #8f959e !important;
+    font-size: 12px !important;
+    overflow-wrap: anywhere;
 }
 
 .pending-payment-method-list {

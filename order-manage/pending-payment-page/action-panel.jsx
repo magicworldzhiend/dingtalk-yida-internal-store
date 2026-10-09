@@ -1,8 +1,9 @@
-const DEFAULT_DEBUG_ORDER_ID = '17920260831135120';
 const YIDA_OSS_PREFIX = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD';
 const HOME_PAGE_URL = 'https://jepa8c.aliwork.com/APP_VZ5VTLROLBD0JJKKLROD/workbench';
 const MY_ORDER_PAGE_ID = 'FORM-B889F45E7D8B4CF8B1E2D69C54D88D8BK0UK';
+const ORDER_DETAIL_PAGE_ID = 'FORM-89F417DBC8DC4E1F8DD01C57CB9AD951BMD8';
 const SKU_FORM_UUID = 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK';
+const WECHAT_PAYMENT_POLL_INTERVAL = 3000;
 
 /**
  * 从当前页面地址读取订单业务主键。
@@ -12,7 +13,158 @@ const SKU_FORM_UUID = 'FORM-016AA49B5DF5456ABF9C5A9BE4D5F090AKKK';
  */
 function getOrderId(page) {
     const urlParams = page.utils.getUrlParams() || {};
-    return String(urlParams.orderId || DEFAULT_DEBUG_ORDER_ID).trim();
+    return String(urlParams.orderId || '').trim();
+}
+
+/**
+ * 提取宜搭连接器响应中的支付服务业务对象。
+ *
+ * @param {Object} response 宜搭数据源响应
+ * @returns {Object} 支付服务业务对象
+ */
+function resolveWechatPaymentResponse(response) {
+    let content = response && response.content !== undefined ? response.content : response;
+
+    if (typeof content === 'string') {
+        try {
+            content = JSON.parse(content);
+        } catch (error) {
+            throw new Error('微信支付服务返回格式异常');
+        }
+    }
+
+    if (content && content.body !== undefined) {
+        content = content.body;
+        if (typeof content === 'string') {
+            try {
+                content = JSON.parse(content);
+            } catch (error) {
+                throw new Error('微信支付服务响应体格式异常');
+            }
+        }
+    }
+
+    return content && content.serviceReturnValue !== undefined
+        ? content.serviceReturnValue
+        : content || {};
+}
+
+/**
+ * 规范化微信 Native 下单服务响应。
+ *
+ * 页面只接收二维码图片和支付尝试号；金额、微信 code_url、商户密钥
+ * 均不能进入宜搭页面状态或浏览器日志。
+ *
+ * @param {Object} response 宜搭数据源响应
+ * @returns {Object} 页面可安全展示的支付信息
+ */
+function buildWechatNativePayment(response) {
+    const content = resolveWechatPaymentResponse(response);
+    const paymentAttemptNo = String(content.paymentAttemptNo || content.outTradeNo || '').trim();
+    const qrCodeImageUrl = String(content.qrCodeImageUrl || content.qrCodeDataUrl || '').trim();
+    const expiresAt = content.expiresAt || content.timeExpire || '';
+
+    if (!paymentAttemptNo || !qrCodeImageUrl || !expiresAt) {
+        throw new Error(content.message || '微信支付单创建结果不完整');
+    }
+
+    return {
+        paymentAttemptNo: paymentAttemptNo,
+        qrCodeImageUrl: qrCodeImageUrl,
+        expiresAt: expiresAt,
+        status: 'PENDING',
+    };
+}
+
+/**
+ * 停止微信支付状态轮询。
+ *
+ * @param {Object} page 页面上下文
+ */
+function stopWechatPaymentStatusPolling(page) {
+    if (page.wechatPaymentPollingTimer) {
+        window.clearTimeout(page.wechatPaymentPollingTimer);
+        page.wechatPaymentPollingTimer = null;
+    }
+}
+
+/**
+ * 轮询支付服务查询订单状态；支付成功必须由支付服务完成验签、查单和宜搭落库。
+ *
+ * @param {Object} page 页面上下文
+ * @returns {Promise<void>} 查询结果
+ */
+async function refreshWechatPaymentStatus(page) {
+    const payment = page.state.wechatPayment || {};
+    const order = page.state.order || {};
+
+    if (!payment.paymentAttemptNo || !order.orderId || page.state.pageStatus !== 'loaded') {
+        return;
+    }
+
+    const response = await page.dataSourceMap.wechatPay.load({
+        inputs: JSON.stringify({
+            Body: {
+                action: 'QUERY',
+                orderId: order.orderId,
+                paymentAttemptNo: payment.paymentAttemptNo,
+            },
+        }),
+    });
+    const content = resolveWechatPaymentResponse(response);
+    const paymentStatus = String(content.paymentStatus || content.status || '').toUpperCase();
+
+    if (paymentStatus === 'SUCCESS') {
+        stopWechatPaymentStatusPolling(page);
+        await loadRawOrderData(page, order.orderId);
+        page.setState({
+            wechatPayment: Object.assign({}, payment, { status: 'SUCCESS' }),
+        });
+        refreshPendingPaymentJsx(page);
+        page.utils.toast({ title: '微信支付成功，正在打开订单详情', type: 'success' });
+        page.wechatPaymentSuccessTimer = window.setTimeout(() => {
+            page.utils.router.replace(ORDER_DETAIL_PAGE_ID, { orderNo: order.orderId });
+        }, 600);
+        return;
+    }
+
+    if (paymentStatus === 'CLOSED' || paymentStatus === 'FAILED') {
+        stopWechatPaymentStatusPolling(page);
+        page.setState({
+            wechatPayment: Object.assign({}, payment, { status: paymentStatus }),
+        });
+        refreshPendingPaymentJsx(page);
+        return;
+    }
+
+    page.setState({
+        wechatPayment: Object.assign({}, payment, { status: 'PENDING' }),
+    });
+    refreshPendingPaymentJsx(page);
+}
+
+/**
+ * 启动微信支付状态轮询。
+ *
+ * @param {Object} page 页面上下文
+ */
+function startWechatPaymentStatusPolling(page) {
+    stopWechatPaymentStatusPolling(page);
+
+    const poll = async () => {
+        try {
+            await refreshWechatPaymentStatus(page);
+        } catch (error) {
+            console.error('[待付款页] 查询微信支付状态失败：', error);
+        }
+
+        const payment = page.state.wechatPayment || {};
+        if (payment.status === 'PENDING' && page.state.pageStatus === 'loaded') {
+            page.wechatPaymentPollingTimer = window.setTimeout(poll, WECHAT_PAYMENT_POLL_INTERVAL);
+        }
+    };
+
+    poll();
 }
 
 /**
@@ -85,6 +237,10 @@ function buildPendingPaymentData(orderResponse, orderDetailResponse) {
             timeoutCloseTime: timeoutCloseTime,
         },
         orderDetail: {
+            formInstId: orderDetailRecord.formInstId || '',
+            recipient: orderDetailFormData.textField_mv0lwdcs || '',
+            address: orderDetailFormData.textField_mv0lwdcv || '',
+            phone: orderDetailFormData.textField_mv0lwdcw || '',
             spuId: orderDetailFormData.textField_mt9xddqu || '',
             skuId: orderDetailFormData.textField_mt9i74jf || '',
             imageUrl: resolveImageUrl(orderDetailFormData.imageField_mtglpdws),
@@ -158,7 +314,7 @@ async function releaseOrderSkuStock(page, orderDetail) {
         formUuid: SKU_FORM_UUID,
         currentPage: 1,
         pageSize: 1,
-        searchFieldJson: JSON.stringify({textField_mt17nqjb: spuId}),
+        searchFieldJson: JSON.stringify({ textField_mt17nqjb: spuId }),
     });
     const skuRecord = response && response.data && response.data[0];
     const skuRows = skuRecord && skuRecord.formData && skuRecord.formData.tableField_msygk2pq;
@@ -176,12 +332,12 @@ async function releaseOrderSkuStock(page, orderDetail) {
     }
 
     const updatedSkuRows = skuRows.map((row, index) => index === skuIndex
-        ? Object.assign({}, row, {numberField_msymrpxd: lockedStock - quantity})
+        ? Object.assign({}, row, { numberField_msymrpxd: lockedStock - quantity })
         : row
     );
     await page.dataSourceMap.updateSkuStock.load({
         formInstId: skuRecord.formInstId,
-        updateFormDataJson: JSON.stringify({tableField_msygk2pq: updatedSkuRows}),
+        updateFormDataJson: JSON.stringify({ tableField_msygk2pq: updatedSkuRows }),
     });
 }
 
@@ -206,9 +362,9 @@ export function initPendingPaymentWheelScroll() {
         const content = findPendingPaymentContentScrollElement();
         if (!content) return;
         event.preventDefault();
-        content.scrollBy({top: event.deltaY, left: event.deltaX, behavior: 'auto'});
+        content.scrollBy({ top: event.deltaY, left: event.deltaX, behavior: 'auto' });
     };
-    document.addEventListener('wheel', page.pendingPaymentWheelScrollHandler, {capture: true, passive: false});
+    document.addEventListener('wheel', page.pendingPaymentWheelScrollHandler, { capture: true, passive: false });
 }
 
 /** 将取消对话框对齐到页面内容区（不含侧边栏）的视觉中心。 */
@@ -331,13 +487,18 @@ async function loadRawOrderData(page, orderId) {
 
     const pendingPaymentData = buildPendingPaymentData(orderResponse, orderDetailResponse);
     if (!pendingPaymentData) {
-        page.setState({pageStatus: 'not-found'});
+        page.setState({ pageStatus: 'not-found' });
         return;
     }
 
     page.setState({
         order: pendingPaymentData.order,
         orderDetail: pendingPaymentData.orderDetail,
+        shippingInfoDraft: {
+            recipient: pendingPaymentData.orderDetail.recipient,
+            address: pendingPaymentData.orderDetail.address,
+            phone: pendingPaymentData.orderDetail.phone,
+        },
         selectedPaymentMethod: pendingPaymentData.order.paymentMethod,
         isSubmittingPayment: false,
         orderRemark: pendingPaymentData.order.remark,
@@ -357,9 +518,8 @@ async function loadRawOrderData(page, orderId) {
 /**
  * 初始化待付款页面的路由状态。
  *
- * 本阶段仅搭建页面骨架。订单与订单明细数据源完成配置后，
- * 再根据 orderId 加载并写入页面状态。DEFAULT_DEBUG_ORDER_ID 仅用于
- * 开发调试，正式发布前必须移除，避免无路由参数时展示测试订单。
+ * 订单与订单明细数据源完成配置后，根据 URL 中的 orderId 加载并写入页面状态。
+ * 缺少 orderId 时直接展示错误页，禁止回退到任何测试订单。
  */
 export async function didMount() {
     initPendingPaymentWheelScroll.call(this);
@@ -371,20 +531,27 @@ export async function didMount() {
         pageStatus: 'loading',
         order: null,
         orderDetail: null,
+        shippingInfoDraft: {recipient: '', address: '', phone: ''},
+        isSavingShippingInfo: false,
         selectedPaymentMethod: '',
         isSubmittingPayment: false,
         orderRemark: '',
+        wechatPayment: null,
         isCancelDialogVisible: false,
         isCancellingOrder: false,
     });
 
     // 内容 JSX 挂载在既有待支付内容 Container 中；全局导航使用独立 Container。
     initPendingPaymentPurchaseBarAlignment.call(this);
+    if (!orderId) {
+        this.setState({ pageStatus: 'missing-order-id' });
+        return;
+    }
     try {
         await loadRawOrderData(this, orderId);
     } catch (error) {
         console.error('[待付款页] 查询订单失败：', error);
-        this.setState({pageStatus: 'load-failed'});
+        this.setState({ pageStatus: 'load-failed' });
     }
 
     // 加载钉钉
@@ -400,6 +567,8 @@ export async function didMount() {
 /** 卸载待支付页时释放页面级监听和倒计时。 */
 export function didUnmount() {
     if (this.pendingPaymentCountdownTimer) window.clearTimeout(this.pendingPaymentCountdownTimer);
+    stopWechatPaymentStatusPolling(this);
+    if (this.wechatPaymentSuccessTimer) window.clearTimeout(this.wechatPaymentSuccessTimer);
     if (this.pendingPaymentPurchaseBarResizeObserver) this.pendingPaymentPurchaseBarResizeObserver.disconnect();
     if (this.pendingPaymentWheelScrollHandler) {
         document.removeEventListener('wheel', this.pendingPaymentWheelScrollHandler, true);
@@ -414,6 +583,54 @@ export function goToHome() {
 /** 打开当前登录人的订单列表。 */
 export function goToMyOrders() {
     this.utils.router.push(MY_ORDER_PAGE_ID);
+}
+
+/** 校验并保存收货信息到当前订单明细表单实例。 */
+export async function onSaveShippingInfo() {
+    const order = this.state.order || {};
+    const orderDetail = this.state.orderDetail || {};
+    if (this.state.isSavingShippingInfo || this.state.isSubmittingPayment || this.state.isCancellingOrder) {
+        return;
+    }
+    if (this.state.pageStatus !== 'loaded' || order.status !== '待支付' || !orderDetail.formInstId) {
+        this.utils.toast({title: '当前订单不可保存收货信息，请刷新后重试', type: 'warning'});
+        return;
+    }
+    const draft = this.state.shippingInfoDraft || {};
+    const shippingInfo = {
+        recipient: String(draft.recipient || '').trim(),
+        address: String(draft.address || '').trim(),
+        phone: String(draft.phone || '').trim(),
+    };
+    if (!shippingInfo.recipient || !shippingInfo.address || !shippingInfo.phone) {
+        this.utils.toast({title: '请填写收件人、地址和电话', type: 'warning'});
+        return;
+    }
+    this.setState({isSavingShippingInfo: true});
+    refreshPendingPaymentJsx(this);
+    try {
+        const response = await this.dataSourceMap.updateOrderShippingInfo.load({
+            formInstId: orderDetail.formInstId,
+            updateFormDataJson: JSON.stringify({
+                textField_mv0lwdcs: shippingInfo.recipient,
+                textField_mv0lwdcv: shippingInfo.address,
+                textField_mv0lwdcw: shippingInfo.phone,
+            }),
+        });
+        if (response && response.success === false) {
+            throw new Error('收货信息保存失败，请稍后重试');
+        }
+        this.setState({
+            orderDetail: Object.assign({}, orderDetail, shippingInfo),
+            shippingInfoDraft: shippingInfo,
+        });
+        this.utils.toast({title: '收货信息已保存', type: 'success'});
+    } catch (error) {
+        this.utils.toast({title: '收货信息保存失败，请稍后重试', type: 'error'});
+    } finally {
+        this.setState({isSavingShippingInfo: false});
+        refreshPendingPaymentJsx(this);
+    }
 }
 
 /**
@@ -484,6 +701,7 @@ export function goToMyOrders() {
 //   }
 // }
 export async function onConfirmPayment() {
+    if (this.state.isSavingShippingInfo) return;
     const order = this.state.order || {};
     const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
     const orderRemark = String(typeof this.pendingPaymentRemarkDraft === 'string'
@@ -499,7 +717,7 @@ export async function onConfirmPayment() {
         return;
     }
     if (orderRemark.length > 150) {
-        this.utils.toast({title: '备注不能超过 150 字', type: 'warning'});
+        this.utils.toast({ title: '备注不能超过 150 字', type: 'warning' });
         return;
     }
     if (!order.formInstId || !selectedPaymentMethod) {
@@ -510,7 +728,7 @@ export async function onConfirmPayment() {
         return;
     }
 
-    this.setState({isSubmittingPayment: true});
+    this.setState({ isSubmittingPayment: true });
     refreshPendingPaymentJsx(this);
 
     try {
@@ -629,14 +847,26 @@ export async function onConfirmPayment() {
             // form.setAttribute('target', '_blank');
             // form.submit(); // 自动提交表单，页面会跳转到支付宝
 
-        } else {
-            // 微信支付暂未接入时的提示
-            this.utils.toast({
-                title: '微信支付暂未开通',
-                type: 'warning',
+        } else if (selectedPaymentMethod === '微信') {
+            // 支付服务以订单号自行查询应付金额和最新订单状态，页面不传递金额或商户配置。
+            const paymentResponse = await this.dataSourceMap.wechatPay.load({
+                inputs: JSON.stringify({
+                    Body: {
+                        action: 'CREATE',
+                        orderId: order.orderId,
+                    },
+                }),
             });
-            this.setState({isSubmittingPayment: false});
+            const wechatPayment = buildWechatNativePayment(paymentResponse);
+            this.setState({
+                isSubmittingPayment: false,
+                wechatPayment: wechatPayment,
+            });
             refreshPendingPaymentJsx(this);
+            this.utils.toast({ title: '请使用微信扫描二维码完成支付', type: 'success' });
+            startWechatPaymentStatusPolling(this);
+        } else {
+            throw new Error('暂不支持所选支付方式');
         }
 
     } catch (error) {
@@ -645,7 +875,7 @@ export async function onConfirmPayment() {
             title: error.message || '支付发起失败，请稍后重试',
             type: 'error',
         });
-        this.setState({isSubmittingPayment: false});
+        this.setState({ isSubmittingPayment: false });
         refreshPendingPaymentJsx(this);
     }
 }
@@ -657,18 +887,33 @@ export async function onConfirmPayment() {
  * 先写入未释放库存的关闭中间态，库存释放成功后再完成关闭状态。
  */
 export async function onCancelOrder() {
+    if (this.state.isSavingShippingInfo) return;
     const order = this.state.order || {};
 
     if (order.status !== '待支付' || !order.formInstId) {
-        this.utils.toast({title: '当前订单不可取消，请刷新后重试', type: 'warning'});
+        this.utils.toast({ title: '当前订单不可取消，请刷新后重试', type: 'warning' });
         return;
     }
 
     const closeTime = Date.now();
-    this.setState({isCancellingOrder: true});
+    this.setState({ isCancellingOrder: true });
     refreshPendingPaymentJsx(this);
 
     try {
+        const wechatPayment = this.state.wechatPayment || {};
+        if (wechatPayment.paymentAttemptNo && wechatPayment.status === 'PENDING') {
+            await this.dataSourceMap.wechatPay.load({
+                inputs: JSON.stringify({
+                    Body: {
+                        action: 'CLOSE',
+                        orderId: order.orderId,
+                        paymentAttemptNo: wechatPayment.paymentAttemptNo,
+                    },
+                }),
+            });
+            stopWechatPaymentStatusPolling(this);
+        }
+
         await this.dataSourceMap.updateOrderOnCancel.load({
             formInstId: order.formInstId,
             updateFormDataJson: JSON.stringify({
@@ -698,7 +943,7 @@ export async function onCancelOrder() {
             }),
         });
         refreshPendingPaymentJsx(this);
-        this.utils.toast({title: '订单已取消', type: 'success'});
+        this.utils.toast({ title: '订单已取消', type: 'success' });
         this.utils.router.replace(MY_ORDER_PAGE_ID);
     } catch (error) {
         console.error('[待付款页] 取消订单失败：', error);
@@ -707,7 +952,7 @@ export async function onCancelOrder() {
             type: 'error',
         });
     } finally {
-        this.setState({isCancellingOrder: false});
+        this.setState({ isCancellingOrder: false });
         refreshPendingPaymentJsx(this);
     }
 }
