@@ -64,7 +64,7 @@ function render() {
     const isCancelDialogVisible = Boolean(pageState.isCancelDialogVisible);
     const canPay = pageStatus === 'loaded'
         && order.status === '待支付'
-        && Boolean(selectedPaymentMethod)
+        && selectedPaymentMethod === '支付宝'
         && !isSubmittingPayment;
     const canCancel = order.status === '待支付' && !isCancellingOrder && !isSavingShippingInfo;
     const imageUrl = orderDetail.imageUrl || '';
@@ -113,7 +113,7 @@ function render() {
     };
 
     const selectPaymentMethod = (paymentMethod) => {
-        if (isSubmittingPayment || isCancellingOrder || order.status !== '待支付') {
+        if (paymentMethod === '微信' || isSubmittingPayment || isCancellingOrder || order.status !== '待支付') {
             return;
         }
         this.setState({ selectedPaymentMethod: paymentMethod });
@@ -289,13 +289,17 @@ function render() {
                 <h2>支付方式</h2>
                 <div class="pending-payment-method-list">
                     {['支付宝', '微信'].map((paymentMethod) => (
-                        <button
+                        <div
                             key={paymentMethod}
+                            class={paymentMethod === '微信' ? 'pending-payment-method-unavailable' : ''}
+                            title={paymentMethod === '微信' ? '微信功能暂不支持，敬请期待' : undefined}
+                        >
+                        <button
                             type="button"
-                            class={selectedPaymentMethod === paymentMethod
+                            class={paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod
                                 ? 'pending-payment-method-row pending-payment-method-row-active'
                                 : 'pending-payment-method-row'}
-                            disabled={isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
+                            disabled={paymentMethod === '微信' || isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
                             onClick={() => selectPaymentMethod(paymentMethod)}
                         >
               <span class="pending-payment-method-icon" aria-hidden="true">
@@ -303,9 +307,10 @@ function render() {
               </span>
                             <span>{paymentMethod}</span>
                             <span class="pending-payment-method-check" aria-hidden="true">
-                {selectedPaymentMethod === paymentMethod ? '✓' : ''}
+                {paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod ? '✓' : ''}
               </span>
                         </button>
+                        </div>
                     ))}
                 </div>
             </section>

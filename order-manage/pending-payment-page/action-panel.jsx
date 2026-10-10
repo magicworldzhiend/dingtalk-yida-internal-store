@@ -585,6 +585,21 @@ export function goToMyOrders() {
     this.utils.router.push(MY_ORDER_PAGE_ID);
 }
 
+/** 提取收货信息并去除各字段的首尾空白。 */
+function buildShippingInfo(value) {
+    const shippingInfo = value || {};
+    return {
+        recipient: String(shippingInfo.recipient || '').trim(),
+        address: String(shippingInfo.address || '').trim(),
+        phone: String(shippingInfo.phone || '').trim(),
+    };
+}
+
+/** 判断收件人、地址和电话是否全部填写。 */
+function hasCompleteShippingInfo(shippingInfo) {
+    return Boolean(shippingInfo.recipient && shippingInfo.address && shippingInfo.phone);
+}
+
 /** 校验并保存收货信息到当前订单明细表单实例。 */
 export async function onSaveShippingInfo() {
     const order = this.state.order || {};
@@ -596,13 +611,8 @@ export async function onSaveShippingInfo() {
         this.utils.toast({title: '当前订单不可保存收货信息，请刷新后重试', type: 'warning'});
         return;
     }
-    const draft = this.state.shippingInfoDraft || {};
-    const shippingInfo = {
-        recipient: String(draft.recipient || '').trim(),
-        address: String(draft.address || '').trim(),
-        phone: String(draft.phone || '').trim(),
-    };
-    if (!shippingInfo.recipient || !shippingInfo.address || !shippingInfo.phone) {
+    const shippingInfo = buildShippingInfo(this.state.shippingInfoDraft);
+    if (!hasCompleteShippingInfo(shippingInfo)) {
         this.utils.toast({title: '请填写收件人、地址和电话', type: 'warning'});
         return;
     }
@@ -704,6 +714,10 @@ export async function onConfirmPayment() {
     if (this.state.isSavingShippingInfo) return;
     const order = this.state.order || {};
     const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
+    if (selectedPaymentMethod === '微信') {
+        this.utils.toast({title: '微信功能暂不支持，敬请期待', type: 'warning'});
+        return;
+    }
     const orderRemark = String(typeof this.pendingPaymentRemarkDraft === 'string'
         ? this.pendingPaymentRemarkDraft
         : this.state.orderRemark || '');
@@ -725,6 +739,21 @@ export async function onConfirmPayment() {
             title: '未获取到订单或支付方式，请刷新后重试。',
             type: 'warning',
         });
+        return;
+    }
+
+    const shippingInfo = buildShippingInfo(this.state.shippingInfoDraft);
+    if (!hasCompleteShippingInfo(shippingInfo)) {
+        this.utils.toast({title: '请填写收件人、地址和电话，并保存收货信息后再支付', type: 'warning'});
+        return;
+    }
+    const orderDetail = this.state.orderDetail || {};
+    const savedShippingInfo = buildShippingInfo(orderDetail);
+    if (!orderDetail.formInstId || !hasCompleteShippingInfo(savedShippingInfo)
+        || shippingInfo.recipient !== savedShippingInfo.recipient
+        || shippingInfo.address !== savedShippingInfo.address
+        || shippingInfo.phone !== savedShippingInfo.phone) {
+        this.utils.toast({title: '请先保存收货信息后再支付', type: 'warning'});
         return;
     }
 

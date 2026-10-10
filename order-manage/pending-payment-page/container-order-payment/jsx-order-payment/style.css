@@ -285,7 +285,18 @@
     transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.pending-payment-method-row:hover {
+.pending-payment-method-unavailable {
+    cursor: not-allowed;
+}
+
+.pending-payment-method-unavailable .pending-payment-method-row {
+    pointer-events: none;
+    color: #8f959e;
+    background: #f5f6f7;
+    filter: grayscale(1);
+}
+
+.pending-payment-method-row:not(:disabled):hover {
     position: relative;
     z-index: 1;
     border-color: #91caff;
