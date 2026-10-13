@@ -4,10 +4,43 @@
  * 三个初始化必须同时保留，避免其中一项功能在覆盖页面 JS 时失效。
  */
 export function didMount() {
+    if (refreshHomeAppNavigation()) {
+        return;
+    }
     initHomeWheelScroll.call(this);
     initHomeSwiper.call(this);
     initHomeProductLoadMore.call(this);
     loadPendingPaymentOrderCount.call(this);
+}
+
+/**
+ * PC 首页根据当前登录人的应用管理标识设置宜搭导航显隐。
+ * 已验证 isAppAdmin 为字符串 y 时包含开发成员，普通用户为 n。
+ * 登录信息未就绪或移动端访问时保留当前导航；跳转时保留其他参数及锚点。
+ *
+ * @returns {boolean} 是否已发起页面跳转，调用方此时无需继续初始化首页。
+ */
+function refreshHomeAppNavigation() {
+    if (window.matchMedia('(max-width: 767px)').matches) {
+        return false;
+    }
+
+    const loginUser = window.loginUser;
+    if (!loginUser || (loginUser.isAppAdmin !== 'y' && loginUser.isAppAdmin !== 'n')) {
+        return false;
+    }
+
+    const canShowAppNavigation = loginUser.isAppAdmin === 'y';
+    const homeUrl = new URL(window.location.href);
+    const isRenderNav = canShowAppNavigation ? 'true' : 'false';
+    if (homeUrl.searchParams.get('isRenderNav') === isRenderNav) {
+        return false;
+    }
+
+    // 普通用户隐藏宜搭导航，具有应用管理标识的人员保留导航。
+    homeUrl.searchParams.set('isRenderNav', isRenderNav);
+    window.location.replace(homeUrl.href);
+    return true;
 }
 
 /** 将首页任意位置的鼠标滚轮统一转交给内容滚动 Container。 */
