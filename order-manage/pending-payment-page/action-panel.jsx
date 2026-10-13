@@ -237,10 +237,6 @@ function buildPendingPaymentData(orderResponse, orderDetailResponse) {
             timeoutCloseTime: timeoutCloseTime,
         },
         orderDetail: {
-            formInstId: orderDetailRecord.formInstId || '',
-            recipient: orderDetailFormData.textField_mv0lwdcs || '',
-            address: orderDetailFormData.textField_mv0lwdcv || '',
-            phone: orderDetailFormData.textField_mv0lwdcw || '',
             spuId: orderDetailFormData.textField_mt9xddqu || '',
             skuId: orderDetailFormData.textField_mt9i74jf || '',
             imageUrl: resolveImageUrl(orderDetailFormData.imageField_mtglpdws),
@@ -494,11 +490,6 @@ async function loadRawOrderData(page, orderId) {
     page.setState({
         order: pendingPaymentData.order,
         orderDetail: pendingPaymentData.orderDetail,
-        shippingInfoDraft: {
-            recipient: pendingPaymentData.orderDetail.recipient,
-            address: pendingPaymentData.orderDetail.address,
-            phone: pendingPaymentData.orderDetail.phone,
-        },
         selectedPaymentMethod: pendingPaymentData.order.paymentMethod,
         isSubmittingPayment: false,
         orderRemark: pendingPaymentData.order.remark,
@@ -531,8 +522,6 @@ export async function didMount() {
         pageStatus: 'loading',
         order: null,
         orderDetail: null,
-        shippingInfoDraft: {recipient: '', address: '', phone: ''},
-        isSavingShippingInfo: false,
         selectedPaymentMethod: '',
         isSubmittingPayment: false,
         orderRemark: '',
@@ -583,64 +572,6 @@ export function goToHome() {
 /** 打开当前登录人的订单列表。 */
 export function goToMyOrders() {
     this.utils.router.push(MY_ORDER_PAGE_ID);
-}
-
-/** 提取收货信息并去除各字段的首尾空白。 */
-function buildShippingInfo(value) {
-    const shippingInfo = value || {};
-    return {
-        recipient: String(shippingInfo.recipient || '').trim(),
-        address: String(shippingInfo.address || '').trim(),
-        phone: String(shippingInfo.phone || '').trim(),
-    };
-}
-
-/** 判断收件人、地址和电话是否全部填写。 */
-function hasCompleteShippingInfo(shippingInfo) {
-    return Boolean(shippingInfo.recipient && shippingInfo.address && shippingInfo.phone);
-}
-
-/** 校验并保存收货信息到当前订单明细表单实例。 */
-export async function onSaveShippingInfo() {
-    const order = this.state.order || {};
-    const orderDetail = this.state.orderDetail || {};
-    if (this.state.isSavingShippingInfo || this.state.isSubmittingPayment || this.state.isCancellingOrder) {
-        return;
-    }
-    if (this.state.pageStatus !== 'loaded' || order.status !== '待支付' || !orderDetail.formInstId) {
-        this.utils.toast({title: '当前订单不可保存收货信息，请刷新后重试', type: 'warning'});
-        return;
-    }
-    const shippingInfo = buildShippingInfo(this.state.shippingInfoDraft);
-    if (!hasCompleteShippingInfo(shippingInfo)) {
-        this.utils.toast({title: '请填写收件人、地址和电话', type: 'warning'});
-        return;
-    }
-    this.setState({isSavingShippingInfo: true});
-    refreshPendingPaymentJsx(this);
-    try {
-        const response = await this.dataSourceMap.updateOrderShippingInfo.load({
-            formInstId: orderDetail.formInstId,
-            updateFormDataJson: JSON.stringify({
-                textField_mv0lwdcs: shippingInfo.recipient,
-                textField_mv0lwdcv: shippingInfo.address,
-                textField_mv0lwdcw: shippingInfo.phone,
-            }),
-        });
-        if (response && response.success === false) {
-            throw new Error('收货信息保存失败，请稍后重试');
-        }
-        this.setState({
-            orderDetail: Object.assign({}, orderDetail, shippingInfo),
-            shippingInfoDraft: shippingInfo,
-        });
-        this.utils.toast({title: '收货信息已保存', type: 'success'});
-    } catch (error) {
-        this.utils.toast({title: '收货信息保存失败，请稍后重试', type: 'error'});
-    } finally {
-        this.setState({isSavingShippingInfo: false});
-        refreshPendingPaymentJsx(this);
-    }
 }
 
 /**
@@ -711,11 +642,10 @@ export async function onSaveShippingInfo() {
 //   }
 // }
 export async function onConfirmPayment() {
-    if (this.state.isSavingShippingInfo) return;
     const order = this.state.order || {};
     const selectedPaymentMethod = this.state.selectedPaymentMethod || '';
     if (selectedPaymentMethod === '微信') {
-        this.utils.toast({title: '微信功能暂不支持，敬请期待', type: 'warning'});
+        this.utils.toast({ title: '微信功能暂不支持，敬请期待', type: 'warning' });
         return;
     }
     const orderRemark = String(typeof this.pendingPaymentRemarkDraft === 'string'
@@ -739,21 +669,6 @@ export async function onConfirmPayment() {
             title: '未获取到订单或支付方式，请刷新后重试。',
             type: 'warning',
         });
-        return;
-    }
-
-    const shippingInfo = buildShippingInfo(this.state.shippingInfoDraft);
-    if (!hasCompleteShippingInfo(shippingInfo)) {
-        this.utils.toast({title: '请填写收件人、地址和电话，并保存收货信息后再支付', type: 'warning'});
-        return;
-    }
-    const orderDetail = this.state.orderDetail || {};
-    const savedShippingInfo = buildShippingInfo(orderDetail);
-    if (!orderDetail.formInstId || !hasCompleteShippingInfo(savedShippingInfo)
-        || shippingInfo.recipient !== savedShippingInfo.recipient
-        || shippingInfo.address !== savedShippingInfo.address
-        || shippingInfo.phone !== savedShippingInfo.phone) {
-        this.utils.toast({title: '请先保存收货信息后再支付', type: 'warning'});
         return;
     }
 
@@ -916,7 +831,6 @@ export async function onConfirmPayment() {
  * 先写入未释放库存的关闭中间态，库存释放成功后再完成关闭状态。
  */
 export async function onCancelOrder() {
-    if (this.state.isSavingShippingInfo) return;
     const order = this.state.order || {};
 
     if (order.status !== '待支付' || !order.formInstId) {

@@ -1,7 +1,7 @@
 /**
  * 渲染待付款订单确认页。
  *
- * 订单和收货信息由页面 JS 加载，保存与支付操作交由页面事件处理。
+ * 订单信息由页面 JS 加载，支付操作交由页面事件处理。
  */
 function render() {
     /** 将金额格式化为人民币展示文本。 */
@@ -56,17 +56,12 @@ function render() {
     const wechatPayment = pageState.wechatPayment || null;
     const isSubmittingPayment = Boolean(pageState.isSubmittingPayment);
     const isCancellingOrder = Boolean(pageState.isCancellingOrder);
-    const isSavingShippingInfo = Boolean(pageState.isSavingShippingInfo);
-    const shippingInfoDraft = pageState.shippingInfoDraft || {};
-    const canEditShippingInfo = pageStatus === 'loaded'
-        && order.status === '待支付'
-        && !isSavingShippingInfo && !isSubmittingPayment && !isCancellingOrder;
     const isCancelDialogVisible = Boolean(pageState.isCancelDialogVisible);
     const canPay = pageStatus === 'loaded'
         && order.status === '待支付'
         && selectedPaymentMethod === '支付宝'
         && !isSubmittingPayment;
-    const canCancel = order.status === '待支付' && !isCancellingOrder && !isSavingShippingInfo;
+    const canCancel = order.status === '待支付' && !isCancellingOrder;
     const imageUrl = orderDetail.imageUrl || '';
     const productName = orderDetail.productName || '订单商品加载中';
     const specification = orderDetail.specification || '--';
@@ -248,43 +243,6 @@ function render() {
                 </div>
             </section>
 
-            <section class="pending-payment-card pending-payment-shipping-card">
-                <h2>收货信息</h2>
-                <div class="pending-payment-shipping-fields">
-                    {[
-                        {key: 'recipient', label: '收件人', type: 'text'},
-                        {key: 'address', label: '地址', type: 'text'},
-                        {key: 'phone', label: '电话', type: 'tel'},
-                    ].map((field) => (
-                        <label key={field.key} class="pending-payment-shipping-field">
-                            <span>{field.label}<span class="pending-payment-required"> *</span></span>
-                            <input
-                                type={field.type}
-                                required
-                                value={shippingInfoDraft[field.key] || ''}
-                                placeholder={'请输入' + field.label}
-                                disabled={!canEditShippingInfo}
-                                onChange={(event) => {
-                                    this.setState({shippingInfoDraft: Object.assign(
-                                        {}, this.state.shippingInfoDraft, {[field.key]: event.target.value}
-                                    )});
-                                    const jsxComponent = this.$('jsx_mtgm8ahr');
-                                    if (jsxComponent) jsxComponent.forceUpdate();
-                                }}
-                            />
-                        </label>
-                    ))}
-                </div>
-                <button
-                    type="button"
-                    class="pending-payment-shipping-save"
-                    disabled={!canEditShippingInfo}
-                    onClick={() => this.onSaveShippingInfo()}
-                >
-                    {isSavingShippingInfo ? '保存中...' : '保存收货信息'}
-                </button>
-            </section>
-
             <section class="pending-payment-card pending-payment-method-card">
                 <h2>支付方式</h2>
                 <div class="pending-payment-method-list">
@@ -294,22 +252,22 @@ function render() {
                             class={paymentMethod === '微信' ? 'pending-payment-method-unavailable' : ''}
                             title={paymentMethod === '微信' ? '微信功能暂不支持，敬请期待' : undefined}
                         >
-                        <button
-                            type="button"
-                            class={paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod
-                                ? 'pending-payment-method-row pending-payment-method-row-active'
-                                : 'pending-payment-method-row'}
-                            disabled={paymentMethod === '微信' || isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
-                            onClick={() => selectPaymentMethod(paymentMethod)}
-                        >
-              <span class="pending-payment-method-icon" aria-hidden="true">
-                {getPaymentMethodIcon(paymentMethod)}
-              </span>
-                            <span>{paymentMethod}</span>
-                            <span class="pending-payment-method-check" aria-hidden="true">
-                {paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod ? '✓' : ''}
-              </span>
-                        </button>
+                            <button
+                                type="button"
+                                class={paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod
+                                    ? 'pending-payment-method-row pending-payment-method-row-active'
+                                    : 'pending-payment-method-row'}
+                                disabled={paymentMethod === '微信' || isSubmittingPayment || isCancellingOrder || order.status !== '待支付'}
+                                onClick={() => selectPaymentMethod(paymentMethod)}
+                            >
+                <span class="pending-payment-method-icon" aria-hidden="true">
+                  {getPaymentMethodIcon(paymentMethod)}
+                </span>
+                                <span>{paymentMethod}</span>
+                                <span class="pending-payment-method-check" aria-hidden="true">
+                  {paymentMethod !== '微信' && selectedPaymentMethod === paymentMethod ? '✓' : ''}
+                </span>
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -421,7 +379,7 @@ function render() {
                         </button>
                         <button
                             type="button"
-                            disabled={!canPay || isCancellingOrder || isSavingShippingInfo}
+                            disabled={!canPay || isCancellingOrder}
                             onClick={() => this.onConfirmPayment()}
                         >
                             {isSubmittingPayment ? '保存中...' : '去支付'}
